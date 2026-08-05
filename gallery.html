@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gallery — OS Media</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --asphalt: #15130F;
+    --asphalt-2: #1E1B15;
+    --asphalt-3: #26221A;
+    --chrome: #D8DADE;
+    --chrome-dim: #8A8D93;
+    --white: #F7F5F0;
+    --amber: #D4A537;
+    --amber-deep: #A8790E;
+    --crimson: #C43B3B;
+    --line: #2E2A21;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:var(--asphalt); color:var(--chrome); font-family:'Inter', sans-serif; }
+  a{ text-decoration:none; }
+  .wrap{ max-width:1100px; margin:0 auto; padding:0 24px; }
+
+  header{
+    position:sticky; top:0; z-index:50;
+    background:rgba(21,19,15,0.92);
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+  }
+  nav{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 24px;
+    max-width:1100px; margin:0 auto;
+  }
+  .brand{
+    display:flex; align-items:center; gap:10px;
+    font-family:'Oswald', sans-serif; font-weight:700; letter-spacing:0.04em;
+    color:var(--white); font-size:19px; text-transform:uppercase;
+  }
+  .brand span{ color:var(--amber); }
+  .back-link{
+    font-family:'JetBrains Mono', monospace; font-size:13px; color:var(--chrome-dim);
+    display:flex; align-items:center; gap:6px;
+  }
+  .back-link:hover{ color:var(--amber); }
+
+  .rev-strip{ height:3px; background:linear-gradient(90deg, var(--amber) 0%, var(--amber) 60%, var(--crimson) 85%, var(--crimson) 100%); }
+
+  .page-head{ padding:56px 0 32px; text-align:center; }
+  .eyebrow{ font-family:'JetBrains Mono', monospace; font-size:13px; letter-spacing:0.1em; color:var(--amber); text-transform:uppercase; }
+  h1{ font-family:'Oswald', sans-serif; font-weight:700; text-transform:uppercase; font-size:clamp(32px,5vw,52px); margin:10px 0; color:var(--white); }
+  .sub{ color:var(--chrome-dim); max-width:520px; margin:0 auto; font-size:16px; line-height:1.5; }
+
+  /* Album grid */
+  .albums{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr));
+    gap:22px; padding:24px 0 80px;
+  }
+  .album{
+    display:block; cursor:pointer; border:1px solid var(--line); border-radius:8px;
+    background:var(--asphalt-2); overflow:hidden;
+    transition:transform .3s ease, box-shadow .3s ease;
+  }
+  .album:hover{ transform:translateY(-4px); box-shadow:0 20px 40px -20px rgba(0,0,0,0.6); }
+  .album-cover{ aspect-ratio:4/3; overflow:hidden; background:var(--asphalt-3); }
+  .album-cover img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .album-meta{ padding:16px 18px 20px; }
+  .album-title{ font-family:'Oswald', sans-serif; font-weight:600; font-size:19px; color:var(--white); text-transform:uppercase; letter-spacing:0.02em; }
+  .album-info{ font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--chrome-dim); margin-top:6px; }
+
+  .empty-state{ text-align:center; padding:60px 20px; color:var(--chrome-dim); }
+
+  /* Single shoot view */
+  #shootView{ display:none; }
+  #shootView.active{ display:block; }
+  #albumsView.hidden{ display:none; }
+  .shoot-head{ padding:40px 0 24px; }
+  .shoot-title{ font-family:'Oswald', sans-serif; font-weight:700; text-transform:uppercase; font-size:clamp(28px,4vw,42px); color:var(--white); margin:8px 0 4px; }
+  .shoot-date{ font-family:'JetBrains Mono', monospace; font-size:13px; color:var(--chrome-dim); }
+
+  .photo-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr));
+    gap:14px; padding:12px 0 80px;
+  }
+  .photo-grid .frame{
+    aspect-ratio:4/5; border-radius:6px; overflow:hidden; border:1px solid var(--line);
+    background:var(--asphalt-2); cursor:pointer;
+  }
+  .photo-grid .frame img{
+    width:100%; height:100%; object-fit:cover; display:block;
+    transition:transform .5s cubic-bezier(.16,1,.3,1);
+  }
+  .photo-grid .frame:hover img{ transform:scale(1.06); }
+
+  /* Lightbox */
+  #lightbox{
+    position:fixed; inset:0; background:rgba(10,9,7,0.96); z-index:200;
+    display:none; align-items:center; justify-content:center; padding:40px;
+  }
+  #lightbox.active{ display:flex; }
+  #lightbox img{ max-width:100%; max-height:100%; border-radius:4px; box-shadow:0 30px 60px rgba(0,0,0,0.6); }
+  .lb-close, .lb-prev, .lb-next{
+    position:absolute; background:rgba(255,255,255,0.06); border:1px solid var(--line);
+    color:var(--white); width:44px; height:44px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px;
+    transition:background .2s ease;
+  }
+  .lb-close:hover, .lb-prev:hover, .lb-next:hover{ background:rgba(212,165,55,0.2); }
+  .lb-close{ top:20px; right:20px; }
+  .lb-prev{ left:20px; top:50%; transform:translateY(-50%); }
+  .lb-next{ right:20px; top:50%; transform:translateY(-50%); }
+
+  footer{ text-align:center; padding:32px 0; color:var(--chrome-dim); font-family:'JetBrains Mono', monospace; font-size:12px; border-top:1px solid var(--line); }
+
+  .loading{ text-align:center; padding:60px 20px; color:var(--chrome-dim); font-family:'JetBrains Mono', monospace; font-size:13px; }
+</style>
+</head>
+<body>
+
+<header>
+  <nav>
+    <a class="brand" href="index.html">OS <span>MEDIA</span></a>
+    <a class="back-link" href="index.html">&larr; Back to home</a>
+  </nav>
+  <div class="rev-strip"></div>
+</header>
+
+<div id="albumsView">
+  <div class="wrap">
+    <div class="page-head">
+      <div class="eyebrow">The full archive</div>
+      <h1>Every shoot</h1>
+      <p class="sub">Every job OS Media has shot, kept together by shoot — meets, private sessions, and everything in between.</p>
+    </div>
+    <div id="albumsGrid" class="albums"></div>
+    <div id="loadingMsg" class="loading">Loading shoots&hellip;</div>
+  </div>
+</div>
+
+<div id="shootView">
+  <div class="wrap">
+    <div class="shoot-head">
+      <a class="back-link" href="javascript:void(0)" onclick="closeShoot()">&larr; All shoots</a>
+      <div class="shoot-title" id="shootTitle"></div>
+      <div class="shoot-date" id="shootDate"></div>
+    </div>
+    <div id="shootGrid" class="photo-grid"></div>
+  </div>
+</div>
+
+<div id="lightbox">
+  <div class="lb-close" onclick="closeLightbox()">&times;</div>
+  <div class="lb-prev" onclick="navLightbox(-1)">&#8249;</div>
+  <img id="lightboxImg" src="" alt="">
+  <div class="lb-next" onclick="navLightbox(1)">&#8250;</div>
+</div>
+
+<footer>OS Media — Owen Smith · Perth, WA</footer>
+
+<script>
+  // Photos that were already on the site before the shoot-by-shoot system existed.
+  const seedShoots = [
+    {
+      id: 'seed-highlights',
+      title: 'Portfolio Highlights',
+      date: '2026',
+      photos: [
+        'images/14-lambo-vineyard-hero.jpg',
+        'images/10-gtr13-sunset-hero.jpg',
+        'images/07-skyline-mustang-reflection.jpg',
+        'images/12-mustang-garage-hero.jpg',
+        'images/01-civic-night.jpg',
+        'images/04-m2-golden-hour.jpg'
+      ]
+    }
+  ];
+
+  let allShoots = [];
+  let currentPhotos = [];
+  let currentIndex = 0;
+
+  async function loadShoots(){
+    let dynamicShoots = [];
+    try{
+      const res = await fetch('/.netlify/functions/shoots-list');
+      if(res.ok){
+        const data = await res.json();
+        dynamicShoots = data.shoots || [];
+      }
+    }catch(e){
+      // Backend not reachable (e.g. running before functions are deployed) - just show seed shoots.
+      console.warn('Could not load dynamic shoots:', e);
+    }
+    allShoots = [...dynamicShoots, ...seedShoots];
+    renderAlbums();
+    document.getElementById('loadingMsg').style.display = 'none';
+  }
+
+  function renderAlbums(){
+    const grid = document.getElementById('albumsGrid');
+    if(allShoots.length === 0){
+      grid.innerHTML = '<div class="empty-state">No shoots yet — check back soon.</div>';
+      return;
+    }
+    grid.innerHTML = allShoots.map(shoot => `
+      <div class="album" onclick="openShoot('${shoot.id}')">
+        <div class="album-cover"><img src="${shoot.photos[0]}" alt="${shoot.title}" loading="lazy"></div>
+        <div class="album-meta">
+          <div class="album-title">${shoot.title}</div>
+          <div class="album-info">${shoot.date} · ${shoot.photos.length} photo${shoot.photos.length === 1 ? '' : 's'}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function openShoot(id){
+    const shoot = allShoots.find(s => s.id === id);
+    if(!shoot) return;
+    document.getElementById('shootTitle').textContent = shoot.title;
+    document.getElementById('shootDate').textContent = shoot.date;
+    document.getElementById('shootGrid').innerHTML = shoot.photos.map((src, i) => `
+      <div class="frame" onclick="openLightbox('${id}', ${i})"><img src="${src}" alt="${shoot.title}" loading="lazy"></div>
+    `).join('');
+    document.getElementById('albumsView').classList.add('hidden');
+    document.getElementById('shootView').classList.add('active');
+    window.scrollTo(0,0);
+    history.pushState({shoot:id}, '', '?shoot=' + encodeURIComponent(id));
+  }
+
+  function closeShoot(){
+    document.getElementById('shootView').classList.remove('active');
+    document.getElementById('albumsView').classList.remove('hidden');
+    window.scrollTo(0,0);
+    history.pushState({}, '', 'gallery.html');
+  }
+
+  function openLightbox(shootId, index){
+    const shoot = allShoots.find(s => s.id === shootId);
+    if(!shoot) return;
+    currentPhotos = shoot.photos;
+    currentIndex = index;
+    document.getElementById('lightboxImg').src = currentPhotos[currentIndex];
+    document.getElementById('lightbox').classList.add('active');
+  }
+
+  function closeLightbox(){
+    document.getElementById('lightbox').classList.remove('active');
+  }
+
+  function navLightbox(dir){
+    currentIndex = (currentIndex + dir + currentPhotos.length) % currentPhotos.length;
+    document.getElementById('lightboxImg').src = currentPhotos[currentIndex];
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if(!document.getElementById('lightbox').classList.contains('active')) return;
+    if(e.key === 'Escape') closeLightbox();
+    if(e.key === 'ArrowLeft') navLightbox(-1);
+    if(e.key === 'ArrowRight') navLightbox(1);
+  });
+
+  // Deep-link support: gallery.html?shoot=some-id opens straight to that shoot
+  window.addEventListener('DOMContentLoaded', () => {
+    loadShoots().then(() => {
+      const params = new URLSearchParams(window.location.search);
+      const shootId = params.get('shoot');
+      if(shootId) openShoot(shootId);
+    });
+  });
+</script>
+
+</body>
+</html>

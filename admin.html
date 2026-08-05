@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — OS Media</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<style>
+  :root{
+    --asphalt: #15130F; --asphalt-2: #1E1B15; --asphalt-3: #26221A;
+    --chrome: #D8DADE; --chrome-dim: #8A8D93; --white: #F7F5F0;
+    --amber: #D4A537; --crimson: #C43B3B; --line: #2E2A21;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:var(--asphalt); color:var(--chrome); font-family:'Inter', sans-serif; min-height:100vh; }
+  .wrap{ max-width:560px; margin:0 auto; padding:60px 24px 100px; }
+  .brand{
+    font-family:'Oswald', sans-serif; font-weight:700; letter-spacing:0.04em;
+    color:var(--white); font-size:19px; text-transform:uppercase; text-align:center; margin-bottom:8px;
+  }
+  .brand span{ color:var(--amber); }
+  .sub{ text-align:center; color:var(--chrome-dim); font-size:14px; margin-bottom:44px; }
+
+  #loginState, #appState{ display:none; }
+  #loginState.active, #appState.active{ display:block; }
+
+  .login-box{ text-align:center; padding:48px 24px; border:1px solid var(--line); border-radius:10px; background:var(--asphalt-2); }
+  .btn{
+    display:inline-block; background:var(--amber); color:var(--asphalt); border:none;
+    padding:13px 26px; border-radius:5px; font-weight:600; font-size:14px; cursor:pointer;
+    font-family:'Inter', sans-serif; transition:background .2s ease;
+  }
+  .btn:hover{ background:#E3B84A; }
+  .btn:disabled{ opacity:0.5; cursor:not-allowed; }
+
+  .card{ border:1px solid var(--line); border-radius:10px; background:var(--asphalt-2); padding:28px; margin-bottom:20px; }
+  .user-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; font-size:13px; color:var(--chrome-dim); }
+  .user-row button{ background:none; border:none; color:var(--crimson); font-family:'Inter', sans-serif; cursor:pointer; font-size:13px; }
+
+  label{ display:block; font-size:13px; font-weight:600; color:var(--white); margin-bottom:6px; margin-top:18px; }
+  label:first-child{ margin-top:0; }
+  input[type=text], input[type=date]{
+    width:100%; background:var(--asphalt-3); border:1px solid var(--line); border-radius:5px;
+    padding:11px 12px; color:var(--white); font-family:'Inter', sans-serif; font-size:14px;
+  }
+  input[type=file]{
+    width:100%; background:var(--asphalt-3); border:1px dashed var(--line); border-radius:5px;
+    padding:20px 12px; color:var(--chrome-dim); font-family:'Inter', sans-serif; font-size:13px;
+  }
+  .submit-row{ margin-top:26px; }
+  .submit-row .btn{ width:100%; }
+
+  .status{ margin-top:16px; font-size:13px; font-family:'JetBrains Mono', monospace; }
+  .status.ok{ color:var(--amber); }
+  .status.err{ color:var(--crimson); }
+  .status.working{ color:var(--chrome-dim); }
+
+  .preview-strip{ display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+  .preview-strip img{ width:64px; height:64px; object-fit:cover; border-radius:4px; border:1px solid var(--line); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">OS <span>MEDIA</span></div>
+  <div class="sub">Shoot manager</div>
+
+  <div id="loginState">
+    <div class="login-box">
+      <p style="margin-top:0;color:var(--chrome-dim);font-size:14px;">Log in to add a new shoot to the site.</p>
+      <button class="btn" onclick="netlifyIdentity.open('login')">Log in</button>
+    </div>
+  </div>
+
+  <div id="appState">
+    <div class="user-row">
+      <span id="userEmail"></span>
+      <button onclick="netlifyIdentity.logout()">Log out</button>
+    </div>
+
+    <div class="card">
+      <label for="shootTitle">Shoot name</label>
+      <input type="text" id="shootTitle" placeholder="e.g. Rockingham Car Meet">
+
+      <label for="shootDate">Date</label>
+      <input type="date" id="shootDate">
+
+      <label for="shootPhotos">Photos</label>
+      <input type="file" id="shootPhotos" accept="image/*" multiple>
+      <div class="preview-strip" id="previewStrip"></div>
+
+      <div class="submit-row">
+        <button class="btn" id="submitBtn" onclick="submitShoot()">Add shoot</button>
+      </div>
+
+      <div class="status" id="status"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  netlifyIdentity.on('init', user => {
+    updateUI(user);
+  });
+  netlifyIdentity.on('login', user => {
+    updateUI(user);
+  });
+  netlifyIdentity.on('logout', () => {
+    updateUI(null);
+  });
+  netlifyIdentity.init();
+
+  function updateUI(user){
+    if(user){
+      document.getElementById('loginState').classList.remove('active');
+      document.getElementById('appState').classList.add('active');
+      document.getElementById('userEmail').textContent = 'Logged in as ' + user.email;
+    } else {
+      document.getElementById('loginState').classList.add('active');
+      document.getElementById('appState').classList.remove('active');
+    }
+  }
+
+  // Default date field to today
+  document.getElementById('shootDate').valueAsDate = new Date();
+
+  // Show small previews of picked files
+  document.getElementById('shootPhotos').addEventListener('change', (e) => {
+    const strip = document.getElementById('previewStrip');
+    strip.innerHTML = '';
+    [...e.target.files].forEach(file => {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      strip.appendChild(img);
+    });
+  });
+
+  // Resize + compress an image file in-browser before upload, so shoots
+  // with lots of high-res photos don't produce huge payloads.
+  function resizeImage(file, maxWidth = 2000, quality = 0.85){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = (e) => { img.src = e.target.result; };
+      reader.onerror = reject;
+      img.onload = () => {
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function submitShoot(){
+    const title = document.getElementById('shootTitle').value.trim();
+    const date = document.getElementById('shootDate').value;
+    const files = document.getElementById('shootPhotos').files;
+    const statusEl = document.getElementById('status');
+    const submitBtn = document.getElementById('submitBtn');
+
+    if(!title){ statusEl.textContent = 'Give the shoot a name first.'; statusEl.className = 'status err'; return; }
+    if(files.length === 0){ statusEl.textContent = 'Pick at least one photo.'; statusEl.className = 'status err'; return; }
+
+    submitBtn.disabled = true;
+    statusEl.className = 'status working';
+
+    try{
+      const photos = [];
+      for(let i = 0; i < files.length; i++){
+        statusEl.textContent = `Processing photo ${i+1} of ${files.length}...`;
+        photos.push(await resizeImage(files[i]));
+      }
+
+      statusEl.textContent = 'Uploading...';
+      const user = netlifyIdentity.currentUser();
+      const token = await user.jwt();
+
+      const res = await fetch('/.netlify/functions/shoots-add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ title, date, photos })
+      });
+
+      if(!res.ok){
+        const errText = await res.text();
+        throw new Error(errText || ('Server returned ' + res.status));
+      }
+
+      statusEl.textContent = 'Shoot added! View it on the gallery page.';
+      statusEl.className = 'status ok';
+      document.getElementById('shootTitle').value = '';
+      document.getElementById('shootPhotos').value = '';
+      document.getElementById('previewStrip').innerHTML = '';
+    }catch(err){
+      console.error(err);
+      statusEl.textContent = 'Something went wrong: ' + err.message;
+      statusEl.className = 'status err';
+    }finally{
+      submitBtn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>
