@@ -98,6 +98,10 @@
     </div>
   </div>
 </div>
+<div class="manage-section">
+  <h2>Manage Shoots</h2>
+  <div id="shootsList">Loading shoots...</div>
+</div>
 
 <script>
   netlifyIdentity.on('init', user => {
@@ -110,6 +114,115 @@
     updateUI(null);
   });
   netlifyIdentity.init();
+async function getAuthHeader() {
+  const user = netlifyIdentity.currentUser();
+  const token = await user.jwt();
+  return { 'Authorization': 'Bearer ' + token };
+}
+
+async function loadShoots() {
+  const res = await fetch('/.netlify/functions/shoots-list');
+  const data = await res.json();
+  renderShoots(data.shoots);
+}
+
+function renderShoots(shoots) {
+  const container = document.getElementById('shootsList');
+  if (!shoots.length) {
+    container.innerHTML = '<p>No shoots yet.</p>';
+    return;
+  }
+
+  container.innerHTML = shoots.map(shoot => `
+    <div class="shoot-card" data-id="${shoot.id}">
+      <input type="text" class="shoot-title-input" value="${shoot.title}" />
+      <input type="date" class="shoot-date-input" value="${shoot.date}" />
+      <div class="photo-grid">
+        ${shoot.photos.map((url, i) => `
+          <div class="photo-thumb">
+            <img src="${url}" width="100" />
+            <label>
+              <input type="radio" name="cover-${shoot.id}"
+                ${shoot.photoKeys[i] === shoot.coverPhoto ? 'checked' : ''}
+                onclick="setCoverPhoto('${shoot.id}', '${shoot.photoKeys[i]}')" />
+              Cover
+            </label>
+            <label>
+              <input type="checkbox"
+                ${shoot.featuredPhotos.includes(shoot.photoKeys[i]) ? 'checked' : ''}
+                onclick="toggleFeatured('${shoot.id}', '${shoot.photoKeys[i]}', this.checked)" />
+              Homepage
+            </label>
+          </div>
+        `).join('')}
+      </div>
+      <button onclick="saveShootDetails('${shoot.id}', this)">Save changes</button>
+      <button onclick="deleteShoot('${shoot.id}')" class="btn-danger">Delete shoot</button>
+    </div>
+  `).join('');
+}
+
+async function saveShootDetails(shootId, btn) {
+  const card = btn.closest('.shoot-card');
+  const title = card.querySelector('.shoot-title-input').value.trim();
+  const date = card.querySelector('.shoot-date-input').value;
+
+  const headers = await getAuthHeader();
+  await fetch('/.netlify/functions/shoots-update', {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ shootId, title, date })
+  });
+
+  loadShoots();
+}
+
+async function setCoverPhoto(shootId, photoKey) {
+  const headers = await getAuthHeader();
+  await fetch('/.netlify/functions/shoots-update', {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ shootId, coverPhoto: photoKey })
+  });
+  loadShoots();
+}
+
+async function toggleFeatured(shootId, photoKey, isChecked) {
+  const res = await fetch('/.netlify/functions/shoots-list');
+  const data = await res.json();
+  const shoot = data.shoots.find(s => s.id === shootId);
+  let featured = shoot.featuredPhotos || [];
+
+  if (isChecked) {
+    featured.push(photoKey);
+  } else {
+    featured = featured.filter(k => k !== photoKey);
+  }
+
+  const headers = await getAuthHeader();
+  await fetch('/.netlify/functions/shoots-update', {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ shootId, featuredPhotos: featured })
+  });
+}
+
+async function deleteShoot(shootId) {
+  if (!confirm('Delete this shoot permanently? This cannot be undone.')) return;
+
+  const headers = await getAuthHeader();
+  await fetch('/.netlify/functions/shoots-delete', {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ shootId })
+  });
+
+  loadShoots();
+}
+
+// Load the shoots list once logged in
+netlifyIdentity.on('login', () => loadShoots());
+netlifyIdentity.on('init', user => { if (user) loadShoots(); });
 
   function updateUI(user){
     if(user){
