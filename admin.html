@@ -121,7 +121,7 @@ async function getAuthHeader() {
 }
 
 async function loadShoots() {
-  const res = await fetch('/.netlify/functions/shoots-list');
+ const res = await fetch('/.netlify/functions/shoots-list?t=' + Date.now());
   const data = await res.json();
   renderShoots(data.shoots);
 }
@@ -188,7 +188,7 @@ async function setCoverPhoto(shootId, photoKey) {
 }
 
 async function toggleFeatured(shootId, photoKey, isChecked) {
-  const res = await fetch('/.netlify/functions/shoots-list');
+const res = await fetch('/.netlify/functions/shoots-list?t=' + Date.now());
   const data = await res.json();
   const shoot = data.shoots.find(s => s.id === shootId);
   let featured = shoot.featuredPhotos || [];
