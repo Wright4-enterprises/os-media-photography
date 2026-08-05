@@ -6,10 +6,20 @@ export default async (req, context) => {
   }
 
   // Only a logged-in Netlify Identity user (i.e. Owen) can add a shoot.
-  const user = context.clientContext && context.clientContext.user;
-  if (!user) {
-    return new Response('Unauthorized - please log in.', { status: 401 });
-  }
+const authHeader = req.headers.get('authorization');
+if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  return new Response('Unauthorized - please log in.', { status: 401 });
+}
+const token = authHeader.split(' ')[1];
+
+let user;
+try {
+  const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+  user = payload;
+} catch (e) {
+  return new Response('Unauthorized - invalid token.', { status: 401 });
+}
+
 
   let body;
   try {
