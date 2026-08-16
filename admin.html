@@ -183,25 +183,21 @@ async function saveShootDetails(shootId, btn) {
       btn.textContent = '✓ Saved!';
       btn.style.background = '#4CAF50';
 
-      // Update the local copy directly instead of re-fetching (avoids stale data)
       const shootIndex = allShoots.findIndex(s => s.id === shootId);
       if (shootIndex !== -1) {
         allShoots[shootIndex].title = data.shoot.title;
         allShoots[shootIndex].date = data.shoot.date;
       }
     } else {
-  const errText = await res.text();
-  console.error('Save failed, server said:', res.status, errText);
-  btn.textContent = '✗ Failed - try again';
-  btn.style.background = '#C43B3B';
-}
-
+      const errText = await res.text();
+      console.error('Save failed, server said:', res.status, errText);
+      btn.textContent = '✗ Failed - try again';
+      btn.style.background = '#C43B3B';
     }
- } catch (e) {
-  console.error('Save failed:', e);
-  btn.textContent = '✗ Failed - try again';
-  btn.style.background = '#C43B3B';
-}
+  } catch (e) {
+    console.error('Save failed:', e);
+    btn.textContent = '✗ Failed - try again';
+    btn.style.background = '#C43B3B';
   }
 
   setTimeout(() => { btn.textContent = 'Save changes'; btn.style.background = ''; btn.disabled = false; }, 1500);
