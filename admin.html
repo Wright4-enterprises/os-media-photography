@@ -104,19 +104,32 @@
   }
   .edit-back:hover{ color:var(--amber); }
 
-  .edit-photo-list{ display:flex; flex-direction:column; gap:10px; margin-top:14px; }
-  .edit-photo-row{
-    display:flex; align-items:center; gap:12px; border:1px solid var(--line); border-radius:6px;
-    padding:8px; background:var(--asphalt-3);
+  .edit-photo-hint{ font-size:12px; color:var(--chrome-dim); margin-top:6px; margin-bottom:2px; }
+
+  /* Drag-and-drop photo grid */
+  .edit-photo-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr));
+    gap:14px; margin-top:14px;
   }
-  .edit-photo-row img{ width:60px; height:60px; object-fit:cover; border-radius:4px; flex-shrink:0; }
-  .edit-photo-controls{ display:flex; flex-direction:column; gap:4px; }
-  .edit-photo-controls button{
-    background:var(--asphalt-2); border:1px solid var(--line); color:var(--chrome);
-    width:26px; height:22px; cursor:pointer; border-radius:3px; font-size:11px;
+  .edit-photo-card{
+    border:1px solid var(--line); border-radius:8px; background:var(--asphalt-3);
+    overflow:hidden; cursor:grab; transition:transform .15s ease, box-shadow .15s ease, opacity .15s ease;
   }
-  .edit-photo-labels{ display:flex; gap:14px; align-items:center; font-size:12px; color:var(--chrome-dim); flex:1; }
-  .edit-photo-labels label{ display:flex; align-items:center; gap:5px; margin:0; font-weight:400; font-size:12px; color:var(--chrome-dim); }
+  .edit-photo-card:active{ cursor:grabbing; }
+  .edit-photo-card.dragging{ opacity:0.4; }
+  .edit-photo-card.drag-over{ box-shadow: 0 0 0 2px var(--amber) inset; transform:scale(1.02); }
+  .edit-photo-thumb{ aspect-ratio:4/3; background:var(--asphalt-2); overflow:hidden; pointer-events:none; }
+  .edit-photo-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .edit-photo-controls-row{ padding:8px 10px 10px; display:flex; flex-direction:column; gap:6px; }
+  .edit-photo-controls-row label{
+    display:flex; align-items:center; gap:6px; margin:0; font-weight:400; font-size:11.5px; color:var(--chrome-dim);
+    text-transform:none; cursor:pointer;
+  }
+  .edit-photo-controls-row .del-btn{
+    background:none; border:none; color:var(--crimson); font-size:11px; cursor:pointer;
+    padding:0; text-align:left; font-family:'Inter', sans-serif;
+  }
+  .edit-photo-controls-row .del-btn:hover{ text-decoration:underline; }
 
   .edit-actions{ display:flex; gap:10px; margin-top:26px; flex-wrap:wrap; }
   .edit-actions .btn{ flex:1; min-width:120px; }
@@ -178,8 +191,9 @@
         <label for="editDate">Date</label>
         <input type="date" id="editDate">
 
-        <label>Photos (use arrows to reorder, radio to set cover, checkbox for homepage)</label>
-        <div class="edit-photo-list" id="editPhotoList"></div>
+        <label>Photos</label>
+        <div class="edit-photo-hint">Drag a photo to reorder. Pick a cover, tick homepage photos, or delete.</div>
+        <div class="edit-photo-grid" id="editPhotoList"></div>
 
         <label for="editAddPhotos">Add more photos</label>
         <input type="file" id="editAddPhotos" accept="image/*" multiple>
@@ -200,6 +214,7 @@
 <script>
   let allShoots = [];
   let editingShootId = null;
+  let dragSrcIndex = null;
 
   netlifyIdentity.on('init', user => {
     updateUI(user);
@@ -291,13 +306,16 @@
   function renderEditPhotoList(shoot) {
     const list = document.getElementById('editPhotoList');
     list.innerHTML = shoot.photoKeys.map((key, i) => `
-      <div class="edit-photo-row">
-        <div class="edit-photo-controls">
-          <button onclick="movePhoto(${i}, -1)" ${i === 0 ? 'disabled' : ''}>&uarr;</button>
-          <button onclick="movePhoto(${i}, 1)" ${i === shoot.photoKeys.length - 1 ? 'disabled' : ''}>&darr;</button>
-        </div>
-        <img src="/.netlify/functions/photo?key=${encodeURIComponent(key)}" />
-        <div class="edit-photo-labels">
+      <div class="edit-photo-card"
+           draggable="true"
+           data-index="${i}"
+           ondragstart="handleDragStart(event, ${i})"
+           ondragover="handleDragOver(event, ${i})"
+           ondragleave="handleDragLeave(event)"
+           ondrop="handleDrop(event, ${i})"
+           ondragend="handleDragEnd(event)">
+        <div class="edit-photo-thumb"><img src="/.netlify/functions/photo?key=${encodeURIComponent(key)}" /></div>
+        <div class="edit-photo-controls-row">
           <label>
             <input type="radio" name="editCover" ${key === shoot.coverPhoto ? 'checked' : ''} onclick="setEditCover('${key}')" />
             Cover
@@ -306,20 +324,45 @@
             <input type="checkbox" ${(shoot.featuredPhotos || []).includes(key) ? 'checked' : ''} onclick="toggleEditFeatured('${key}', this.checked)" />
             Homepage
           </label>
+          <button class="del-btn" onclick="deletePhotoFromEdit('${key}')">Delete photo</button>
         </div>
-        <button class="btn btn-danger btn-small" onclick="deletePhotoFromEdit('${key}')">Delete</button>
       </div>
     `).join('');
   }
 
-  function movePhoto(index, direction) {
+  function handleDragStart(e, index) {
+    dragSrcIndex = index;
+    e.currentTarget.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  function handleDragOver(e, index) {
+    e.preventDefault();
+    e.currentTarget.classList.add('drag-over');
+  }
+
+  function handleDragLeave(e) {
+    e.currentTarget.classList.remove('drag-over');
+  }
+
+  function handleDrop(e, dropIndex) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    if (dragSrcIndex === null || dragSrcIndex === dropIndex) return;
+
     const shoot = allShoots.find(s => s.id === editingShootId);
-    const newIndex = index + direction;
-    if (newIndex < 0 || newIndex >= shoot.photoKeys.length) return;
-    const temp = shoot.photoKeys[index];
-    shoot.photoKeys[index] = shoot.photoKeys[newIndex];
-    shoot.photoKeys[newIndex] = temp;
+    const keys = shoot.photoKeys;
+    const [moved] = keys.splice(dragSrcIndex, 1);
+    keys.splice(dropIndex, 0, moved);
+
+    dragSrcIndex = null;
     renderEditPhotoList(shoot);
+  }
+
+  function handleDragEnd(e) {
+    e.currentTarget.classList.remove('dragging');
+    document.querySelectorAll('.edit-photo-card.drag-over').forEach(el => el.classList.remove('drag-over'));
+    dragSrcIndex = null;
   }
 
   function setEditCover(key) {
