@@ -497,10 +497,14 @@ async function addPhotosToShoot() {
     throw new Error(errText || ('Server returned ' + res.status));
   }
 
-  const data = await res.json();
-  const shootId = data.shootId;
+ const data = await res.json();
+const shootId = data.shootId;
 
-  for(let i = 1; i < allPhotos.length; i++){
+statusEl.textContent = 'Finalizing shoot...';
+await new Promise(resolve => setTimeout(resolve, 3000));
+
+for(let i = 1; i < allPhotos.length; i++){
+
     statusEl.textContent = `Uploading photo ${i+1} of ${allPhotos.length}...`;
 
     const photoRes = await fetch('/.netlify/functions/shoots-add-photos', {
