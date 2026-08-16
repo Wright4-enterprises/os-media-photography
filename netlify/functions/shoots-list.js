@@ -21,7 +21,7 @@ export default async (req, context) => {
     status: 200,
     headers: {
       'Content-Type': 'application/json',
-      'Cache-Control': 'public, max-age=60'
+      'Cache-Control': 'public, max-age=1'
     }
   });
 };
