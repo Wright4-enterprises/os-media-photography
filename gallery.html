@@ -194,7 +194,7 @@
       // Backend not reachable (e.g. running before functions are deployed) - just show seed shoots.
       console.warn('Could not load dynamic shoots:', e);
     }
-    allShoots = [...dynamicShoots, ...seedShoots];
+    allShoots = [dynamicShoots;
     renderAlbums();
     document.getElementById('loadingMsg').style.display = 'none';
   }
