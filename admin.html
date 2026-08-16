@@ -117,9 +117,8 @@
   }
   .edit-photo-card:active{ cursor:grabbing; }
   .edit-photo-card.dragging{
-    opacity:0.5; box-shadow: 0 14px 28px -10px rgba(0,0,0,0.55); z-index:2; transform:scale(1.05);
+    opacity:0.35;
   }
-  .edit-photo-card.drag-over{ box-shadow: 0 0 0 2px var(--amber) inset; }
   .edit-photo-thumb{ aspect-ratio:4/3; background:var(--asphalt-2); overflow:hidden; pointer-events:none; }
   .edit-photo-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
   .edit-photo-controls-row{ padding:8px 10px 10px; display:flex; flex-direction:column; gap:6px; }
@@ -195,7 +194,7 @@
 
         <label>Photos</label>
         <div class="edit-photo-hint">Drag a photo to reorder. Pick a cover, tick homepage photos, or delete.</div>
-        <div class="edit-photo-grid" id="editPhotoList"></div>
+        <div class="edit-photo-grid" id="editPhotoList" ondragover="handleGridDragOver(event)"></div>
 
         <label for="editAddPhotos">Add more photos</label>
         <input type="file" id="editAddPhotos" accept="image/*" multiple>
@@ -216,7 +215,6 @@
 <script>
   let allShoots = [];
   let editingShootId = null;
-  let dragSrcIndex = null;
 
   netlifyIdentity.on('init', user => {
     updateUI(user);
@@ -307,21 +305,11 @@
 
   function renderEditPhotoList(shoot) {
     const list = document.getElementById('editPhotoList');
-    const existingCards = [...list.querySelectorAll('.edit-photo-card')];
-    const firstRects = new Map();
-    existingCards.forEach(card => {
-      firstRects.set(card.dataset.key, card.getBoundingClientRect());
-    });
-
-    list.innerHTML = shoot.photoKeys.map((key, i) => `
+    list.innerHTML = shoot.photoKeys.map((key) => `
       <div class="edit-photo-card"
            draggable="true"
-           data-index="${i}"
            data-key="${key}"
-           ondragstart="handleDragStart(event, ${i})"
-           ondragover="handleDragOver(event, ${i})"
-           ondragleave="handleDragLeave(event)"
-           ondrop="handleDrop(event, ${i})"
+           ondragstart="handleDragStart(event)"
            ondragend="handleDragEnd(event)">
         <div class="edit-photo-thumb"><img src="/.netlify/functions/photo?key=${encodeURIComponent(key)}" /></div>
         <div class="edit-photo-controls-row">
@@ -337,72 +325,50 @@
         </div>
       </div>
     `).join('');
-
-    const newCards = [...list.querySelectorAll('.edit-photo-card')];
-    newCards.forEach(card => {
-      const key = card.dataset.key;
-      const firstRect = firstRects.get(key);
-      if (!firstRect) return;
-      const lastRect = card.getBoundingClientRect();
-      const dx = firstRect.left - lastRect.left;
-      const dy = firstRect.top - lastRect.top;
-      if (dx || dy) {
-        card.style.transform = `translate(${dx}px, ${dy}px)`;
-        card.style.transition = 'none';
-        requestAnimationFrame(() => {
-          card.style.transform = '';
-          card.style.transition = 'transform .28s cubic-bezier(.22,1,.36,1)';
-        });
-      }
-    });
   }
 
-  function handleDragStart(e, index) {
-    dragSrcIndex = index;
+  function handleDragStart(e) {
     e.currentTarget.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
   }
 
- let dragRafPending = false;
+  function handleGridDragOver(e) {
+    e.preventDefault();
+    const container = document.getElementById('editPhotoList');
+    const dragging = container.querySelector('.edit-photo-card.dragging');
+    if (!dragging) return;
 
-function handleDragOver(e, index) {
-  e.preventDefault();
-  if (dragSrcIndex === null || dragSrcIndex === index || dragRafPending) return;
-
-  dragRafPending = true;
-  requestAnimationFrame(() => {
-    dragRafPending = false;
-    if (dragSrcIndex === null || dragSrcIndex === index) return;
-
-    const shoot = allShoots.find(s => s.id === editingShootId);
-    const keys = shoot.photoKeys;
-    const [moved] = keys.splice(dragSrcIndex, 1);
-    keys.splice(index, 0, moved);
-    dragSrcIndex = index;
-
-    renderEditPhotoList(shoot);
-    const cards = document.querySelectorAll('.edit-photo-card');
-    if (cards[index]) cards[index].classList.add('dragging');
-  });
-}
-
-
-  function handleDragLeave(e) {
-    e.currentTarget.classList.remove('drag-over');
+    const afterElement = getDragAfterElement(container, e.clientX, e.clientY);
+    if (afterElement == null) {
+      if (container.lastElementChild !== dragging) container.appendChild(dragging);
+    } else if (afterElement !== dragging) {
+      container.insertBefore(dragging, afterElement);
+    }
   }
 
-  function handleDrop(e, dropIndex) {
-    e.preventDefault();
-    dragSrcIndex = null;
-    const shoot = allShoots.find(s => s.id === editingShootId);
-    renderEditPhotoList(shoot);
+  function getDragAfterElement(container, x, y) {
+    const cards = [...container.querySelectorAll('.edit-photo-card:not(.dragging)')];
+    let closest = { distance: Infinity, element: null, isAfter: false };
+
+    cards.forEach(card => {
+      const box = card.getBoundingClientRect();
+      const cx = box.left + box.width / 2;
+      const cy = box.top + box.height / 2;
+      const distance = Math.hypot(x - cx, y - cy);
+      if (distance < closest.distance) {
+        closest = { distance, element: card, isAfter: y > cy };
+      }
+    });
+
+    if (!closest.element) return null;
+    return closest.isAfter ? closest.element.nextElementSibling : closest.element;
   }
 
   function handleDragEnd(e) {
-    document.querySelectorAll('.edit-photo-card').forEach(el => {
-      el.classList.remove('dragging', 'drag-over');
-    });
-    dragSrcIndex = null;
+    e.currentTarget.classList.remove('dragging');
+    const shoot = allShoots.find(s => s.id === editingShootId);
+    const container = document.getElementById('editPhotoList');
+    shoot.photoKeys = [...container.querySelectorAll('.edit-photo-card')].map(card => card.dataset.key);
   }
 
   function setEditCover(key) {
