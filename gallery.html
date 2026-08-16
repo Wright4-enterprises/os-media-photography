@@ -191,7 +191,8 @@
     }
     grid.innerHTML = allShoots.map(shoot => `
       <div class="album" onclick="openShoot('${shoot.id}')">
-        <div class="album-cover"><img src="${shoot.photos[0]}" alt="${shoot.title}" loading="lazy"></div>
+        <div class="album-cover"><img src="${shoot.coverPhoto ? '/.netlify/functions/photo?key=' + encodeURIComponent(shoot.coverPhoto) : shoot.photos[0]}" alt="${shoot.title}" loading="lazy"></div>
+
         <div class="album-meta">
           <div class="album-title">${shoot.title}</div>
           <div class="album-info">${shoot.date} · ${shoot.photos.length} photo${shoot.photos.length === 1 ? '' : 's'}</div>
