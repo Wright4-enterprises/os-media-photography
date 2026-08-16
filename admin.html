@@ -217,7 +217,8 @@ async function deleteShoot(shootId) {
     body: JSON.stringify({ shootId })
   });
 
-  loadShoots();
+ setTimeout(loadShoots, 400);
+
 }
 
 // Load the shoots list once logged in
