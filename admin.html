@@ -172,6 +172,10 @@
 
         <label>Photos (use arrows to reorder, radio to set cover, checkbox for homepage)</label>
         <div class="edit-photo-list" id="editPhotoList"></div>
+<label for="editAddPhotos">Add more photos</label>
+<input type="file" id="editAddPhotos" accept="image/*" multiple>
+<button class="btn btn-secondary btn-small" style="margin-top:10px;" onclick="addPhotosToShoot()">Upload selected photos</button>
+<div class="status" id="editAddStatus"></div>
 
         <div class="edit-actions">
           <button class="btn" id="editSaveBtn" onclick="saveEditedShoot()">Save changes</button>
