@@ -190,12 +190,18 @@ async function saveShootDetails(shootId, btn) {
         allShoots[shootIndex].date = data.shoot.date;
       }
     } else {
-      btn.textContent = '✗ Failed - try again';
-      btn.style.background = '#C43B3B';
+  const errText = await res.text();
+  console.error('Save failed, server said:', res.status, errText);
+  btn.textContent = '✗ Failed - try again';
+  btn.style.background = '#C43B3B';
+}
+
     }
-  } catch (e) {
-    btn.textContent = '✗ Failed - try again';
-    btn.style.background = '#C43B3B';
+ } catch (e) {
+  console.error('Save failed:', e);
+  btn.textContent = '✗ Failed - try again';
+  btn.style.background = '#C43B3B';
+}
   }
 
   setTimeout(() => { btn.textContent = 'Save changes'; btn.style.background = ''; btn.disabled = false; }, 1500);
