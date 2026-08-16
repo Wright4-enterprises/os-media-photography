@@ -330,40 +330,45 @@
     `).join('');
   }
 
-  function handleDragStart(e, index) {
-    dragSrcIndex = index;
-    e.currentTarget.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'move';
-  }
+function handleDragStart(e, index) {
+  dragSrcIndex = index;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
 
-  function handleDragOver(e, index) {
-    e.preventDefault();
-    e.currentTarget.classList.add('drag-over');
-  }
+function handleDragOver(e, index) {
+  e.preventDefault();
+  if (dragSrcIndex === null || dragSrcIndex === index) return;
 
-  function handleDragLeave(e) {
-    e.currentTarget.classList.remove('drag-over');
-  }
+  const shoot = allShoots.find(s => s.id === editingShootId);
+  const keys = shoot.photoKeys;
+  const [moved] = keys.splice(dragSrcIndex, 1);
+  keys.splice(index, 0, moved);
+  dragSrcIndex = index;
 
-  function handleDrop(e, dropIndex) {
-    e.preventDefault();
-    e.currentTarget.classList.remove('drag-over');
-    if (dragSrcIndex === null || dragSrcIndex === dropIndex) return;
+  renderEditPhotoList(shoot);
+  const cards = document.querySelectorAll('.edit-photo-card');
+  if (cards[index]) cards[index].classList.add('dragging');
+}
 
-    const shoot = allShoots.find(s => s.id === editingShootId);
-    const keys = shoot.photoKeys;
-    const [moved] = keys.splice(dragSrcIndex, 1);
-    keys.splice(dropIndex, 0, moved);
+function handleDragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
 
-    dragSrcIndex = null;
-    renderEditPhotoList(shoot);
-  }
+function handleDrop(e, dropIndex) {
+  e.preventDefault();
+  dragSrcIndex = null;
+  const shoot = allShoots.find(s => s.id === editingShootId);
+  renderEditPhotoList(shoot);
+}
 
-  function handleDragEnd(e) {
-    e.currentTarget.classList.remove('dragging');
-    document.querySelectorAll('.edit-photo-card.drag-over').forEach(el => el.classList.remove('drag-over'));
-    dragSrcIndex = null;
-  }
+function handleDragEnd(e) {
+  document.querySelectorAll('.edit-photo-card').forEach(el => {
+    el.classList.remove('dragging', 'drag-over');
+  });
+  dragSrcIndex = null;
+}
+
 
   function setEditCover(key) {
     const shoot = allShoots.find(s => s.id === editingShootId);
