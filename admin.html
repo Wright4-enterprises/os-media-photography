@@ -502,7 +502,7 @@ async function addPhotosToShoot() {
 
     const data = await res.json();
     const shootId = data.shootId;
-await new Promise(resolve => setTimeout(resolve, 500));
+await new Promise(resolve => setTimeout(resolve, 2500));
     let batchNum = 2;
     for(let i = BATCH_SIZE; i < allPhotos.length; i += BATCH_SIZE){
       const batch = allPhotos.slice(i, i + BATCH_SIZE);
