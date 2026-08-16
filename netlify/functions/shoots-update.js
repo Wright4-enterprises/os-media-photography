@@ -1,24 +1,56 @@
 import { getStore } from '@netlify/blobs';
 
 export default async (req, context) => {
+  if (req.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405 });
+  }
+
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return new Response('Unauthorized - please log in.', { status: 401 });
+  }
+  const token = authHeader.split(' ')[1];
+
+  try {
+    JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+  } catch (e) {
+    return new Response('Unauthorized - invalid token.', { status: 401 });
+  }
+
+  let body;
+  try {
+    body = await req.json();
+  } catch (e) {
+    return new Response('Invalid request body.', { status: 400 });
+  }
+
+  const { shootId, title, date, coverPhoto, featuredPhotos } = body;
+  if (!shootId) {
+    return new Response('A shootId is required.', { status: 400 });
+  }
+
   const shootsStore = getStore('shoots');
 
   const manifestRaw = await shootsStore.get('manifest.json');
   const manifest = manifestRaw ? JSON.parse(manifestRaw) : [];
 
-  // Turn stored photo keys into URLs the gallery page can use as <img src>
-  const shoots = manifest.map(shoot => ({
-    id: shoot.id,
-    title: shoot.title,
-    date: shoot.date,
-    photos: shoot.photoKeys.map(key => `/.netlify/functions/photo?key=${encodeURIComponent(key)}`)
-  }));
+  const shootIndex = manifest.findIndex(s => s.id === shootId);
+  if (shootIndex === -1) {
+    return new Response('Shoot not found.', { status: 404 });
+  }
 
-  return new Response(JSON.stringify({ shoots }), {
+  const shoot = manifest[shootIndex];
+
+  if (title !== undefined) shoot.title = title;
+  if (date !== undefined) shoot.date = date;
+  if (coverPhoto !== undefined) shoot.coverPhoto = coverPhoto;
+  if (featuredPhotos !== undefined) shoot.featuredPhotos = featuredPhotos;
+
+  manifest[shootIndex] = shoot;
+  await shootsStore.set('manifest.json', JSON.stringify(manifest));
+
+  return new Response(JSON.stringify({ ok: true, shoot }), {
     status: 200,
-    headers: {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'public, max-age=60'
-    }
+    headers: { 'Content-Type': 'application/json' }
   });
 };
