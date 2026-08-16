@@ -510,7 +510,7 @@ await new Promise(resolve => setTimeout(resolve, 500));
 
       let batchRes;
 let attempts = 0;
-const maxAttempts = 5;
+const maxAttempts = 8;
 
 while (attempts < maxAttempts) {
   batchRes = await fetch('/.netlify/functions/shoots-add-photos', {
@@ -529,7 +529,8 @@ while (attempts < maxAttempts) {
 
   if (errText.includes('not found') && attempts < maxAttempts) {
     statusEl.textContent = `Shoot still saving, retrying batch ${batchNum}... (${attempts}/${maxAttempts})`;
-    await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+   await new Promise(resolve => setTimeout(resolve, 1500 * attempts));
+
     continue;
   }
 
@@ -537,6 +538,8 @@ while (attempts < maxAttempts) {
 }
 
       batchNum++;
+      await new Promise(resolve => setTimeout(resolve, 800));
+
     }
 
     statusEl.textContent = 'Shoot added! View it below.';
