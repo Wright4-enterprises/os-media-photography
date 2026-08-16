@@ -363,8 +363,15 @@
     e.dataTransfer.effectAllowed = 'move';
   }
 
-  function handleDragOver(e, index) {
-    e.preventDefault();
+ let dragRafPending = false;
+
+function handleDragOver(e, index) {
+  e.preventDefault();
+  if (dragSrcIndex === null || dragSrcIndex === index || dragRafPending) return;
+
+  dragRafPending = true;
+  requestAnimationFrame(() => {
+    dragRafPending = false;
     if (dragSrcIndex === null || dragSrcIndex === index) return;
 
     const shoot = allShoots.find(s => s.id === editingShootId);
@@ -376,7 +383,9 @@
     renderEditPhotoList(shoot);
     const cards = document.querySelectorAll('.edit-photo-card');
     if (cards[index]) cards[index].classList.add('dragging');
-  }
+  });
+}
+
 
   function handleDragLeave(e) {
     e.currentTarget.classList.remove('drag-over');
