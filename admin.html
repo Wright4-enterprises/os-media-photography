@@ -177,10 +177,12 @@
 <button class="btn btn-secondary btn-small" style="margin-top:10px;" onclick="addPhotosToShoot()">Upload selected photos</button>
 <div class="status" id="editAddStatus"></div>
 
-        <div class="edit-actions">
-          <button class="btn" id="editSaveBtn" onclick="saveEditedShoot()">Save changes</button>
-          <button class="btn btn-danger" onclick="deleteCurrentShoot()">Delete shoot</button>
-        </div>
+ <div class="edit-actions">
+  <button class="btn" id="editSaveBtn" onclick="saveEditedShoot()">Save changes</button>
+  <button class="btn btn-secondary" id="hideBtn" onclick="toggleHidden()">Hide from gallery</button>
+  <button class="btn btn-secondary" id="archiveBtn" onclick="toggleArchived()">Archive shoot</button>
+  <button class="btn btn-danger" onclick="deleteCurrentShoot()">Delete shoot</button>
+</div>
       </div>
     </div>
   </div>
