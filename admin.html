@@ -508,19 +508,34 @@ await new Promise(resolve => setTimeout(resolve, 500));
       const batch = allPhotos.slice(i, i + BATCH_SIZE);
       statusEl.textContent = `Uploading batch ${batchNum} of ${Math.ceil(allPhotos.length / BATCH_SIZE)}...`;
 
-      const batchRes = await fetch('/.netlify/functions/shoots-add-photos', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({ shootId, photos: batch })
-      });
+      let batchRes;
+let attempts = 0;
+const maxAttempts = 5;
 
-      if(!batchRes.ok){
-        const errText = await batchRes.text();
-        throw new Error(errText || ('Server returned ' + batchRes.status));
-      }
+while (attempts < maxAttempts) {
+  batchRes = await fetch('/.netlify/functions/shoots-add-photos', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token
+    },
+    body: JSON.stringify({ shootId, photos: batch })
+  });
+
+  if (batchRes.ok) break;
+
+  const errText = await batchRes.text();
+  attempts++;
+
+  if (errText.includes('not found') && attempts < maxAttempts) {
+    statusEl.textContent = `Shoot still saving, retrying batch ${batchNum}... (${attempts}/${maxAttempts})`;
+    await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+    continue;
+  }
+
+  throw new Error(errText || ('Server returned ' + batchRes.status));
+}
+
       batchNum++;
     }
 
