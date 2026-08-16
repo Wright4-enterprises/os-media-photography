@@ -472,89 +472,64 @@ async function addPhotosToShoot() {
   submitBtn.disabled = true;
   statusEl.className = 'status working';
 
-  const BATCH_SIZE = 4;
+ try{
+  const allPhotos = [];
+  for(let i = 0; i < files.length; i++){
+    statusEl.textContent = `Processing photo ${i+1} of ${files.length}...`;
+    allPhotos.push(await resizeImage(files[i]));
+  }
 
-  try{
-    const allPhotos = [];
-    for(let i = 0; i < files.length; i++){
-      statusEl.textContent = `Processing photo ${i+1} of ${files.length}...`;
-      allPhotos.push(await resizeImage(files[i]));
-    }
+  const user = netlifyIdentity.currentUser();
+  const token = await user.jwt();
 
-    const user = netlifyIdentity.currentUser();
-    const token = await user.jwt();
-
-    statusEl.textContent = `Uploading batch 1 of ${Math.ceil(allPhotos.length / BATCH_SIZE)}...`;
-    const firstBatch = allPhotos.slice(0, BATCH_SIZE);
-    const res = await fetch('/.netlify/functions/shoots-add', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
-      },
-      body: JSON.stringify({ title, date, photos: firstBatch })
-    });
-
-    if(!res.ok){
-      const errText = await res.text();
-      throw new Error(errText || ('Server returned ' + res.status));
-    }
-
-    const data = await res.json();
-    const shootId = data.shootId;
-await new Promise(resolve => setTimeout(resolve, 2500));
-    let batchNum = 2;
-    for(let i = BATCH_SIZE; i < allPhotos.length; i += BATCH_SIZE){
-      const batch = allPhotos.slice(i, i + BATCH_SIZE);
-      statusEl.textContent = `Uploading batch ${batchNum} of ${Math.ceil(allPhotos.length / BATCH_SIZE)}...`;
-
-      let batchRes;
-let attempts = 0;
-const maxAttempts = 8;
-
-while (attempts < maxAttempts) {
-  batchRes = await fetch('/.netlify/functions/shoots-add-photos', {
+  statusEl.textContent = `Uploading photo 1 of ${allPhotos.length}...`;
+  const res = await fetch('/.netlify/functions/shoots-add', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer ' + token
     },
-    body: JSON.stringify({ shootId, photos: batch })
+    body: JSON.stringify({ title, date, photos: [allPhotos[0]] })
   });
 
-  if (batchRes.ok) break;
-
-  const errText = await batchRes.text();
-  attempts++;
-
-  if (errText.includes('not found') && attempts < maxAttempts) {
-    statusEl.textContent = `Shoot still saving, retrying batch ${batchNum}... (${attempts}/${maxAttempts})`;
-   await new Promise(resolve => setTimeout(resolve, 1500 * attempts));
-
-    continue;
+  if(!res.ok){
+    const errText = await res.text();
+    throw new Error(errText || ('Server returned ' + res.status));
   }
 
-  throw new Error(errText || ('Server returned ' + batchRes.status));
-}
+  const data = await res.json();
+  const shootId = data.shootId;
 
-      batchNum++;
-      await new Promise(resolve => setTimeout(resolve, 800));
+  for(let i = 1; i < allPhotos.length; i++){
+    statusEl.textContent = `Uploading photo ${i+1} of ${allPhotos.length}...`;
 
+    const photoRes = await fetch('/.netlify/functions/shoots-add-photos', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ shootId, photos: [allPhotos[i]] })
+    });
+
+    if(!photoRes.ok){
+      const errText = await photoRes.text();
+      throw new Error(`Photo ${i+1} failed: ` + (errText || ('Server returned ' + photoRes.status)));
     }
-
-    statusEl.textContent = 'Shoot added! View it below.';
-    statusEl.className = 'status ok';
-    document.getElementById('shootTitle').value = '';
-    document.getElementById('shootPhotos').value = '';
-    document.getElementById('previewStrip').innerHTML = '';
-    loadShoots();
-  }catch(err){
-    console.error(err);
-    statusEl.textContent = 'Something went wrong: ' + err.message;
-    statusEl.className = 'status err';
-  }finally{
-    submitBtn.disabled = false;
   }
+
+  statusEl.textContent = 'Shoot added! View it below.';
+  statusEl.className = 'status ok';
+  document.getElementById('shootTitle').value = '';
+  document.getElementById('shootPhotos').value = '';
+  document.getElementById('previewStrip').innerHTML = '';
+  loadShoots();
+}catch(err){
+  console.error(err);
+  statusEl.textContent = 'Something went wrong: ' + err.message;
+  statusEl.className = 'status err';
+}finally{
+  submitBtn.disabled = false;
 }
 
 </script>
