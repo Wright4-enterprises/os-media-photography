@@ -179,8 +179,16 @@ async function saveShootDetails(shootId, btn) {
     });
 
     if (res.ok) {
+      const data = await res.json();
       btn.textContent = '✓ Saved!';
       btn.style.background = '#4CAF50';
+
+      // Update the local copy directly instead of re-fetching (avoids stale data)
+      const shootIndex = allShoots.findIndex(s => s.id === shootId);
+      if (shootIndex !== -1) {
+        allShoots[shootIndex].title = data.shoot.title;
+        allShoots[shootIndex].date = data.shoot.date;
+      }
     } else {
       btn.textContent = '✗ Failed - try again';
       btn.style.background = '#C43B3B';
@@ -190,10 +198,9 @@ async function saveShootDetails(shootId, btn) {
     btn.style.background = '#C43B3B';
   }
 
-  setTimeout(() => {
-    loadShoots();
-  }, 1500);
+  setTimeout(() => { btn.textContent = 'Save changes'; btn.style.background = ''; btn.disabled = false; }, 1500);
 }
+
 
 
 async function setCoverPhoto(shootId, photoKey) {
