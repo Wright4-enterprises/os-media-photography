@@ -414,7 +414,12 @@ async function addPhotosToShoot() {
     });
     closeEditShoot();
   }
-
+<div class="edit-actions">
+  <button class="btn" id="editSaveBtn" onclick="saveEditedShoot()">Save changes</button>
+  <button class="btn btn-secondary" id="hideBtn" onclick="toggleHidden()">Hide from gallery</button>
+  <button class="btn btn-secondary" id="archiveBtn" onclick="toggleArchived()">Archive shoot</button>
+  <button class="btn btn-danger" onclick="deleteCurrentShoot()">Delete shoot</button>
+</div>
   netlifyIdentity.on('login', () => loadShoots());
   netlifyIdentity.on('init', user => { if (user) loadShoots(); });
 
