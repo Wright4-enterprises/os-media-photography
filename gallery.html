@@ -169,7 +169,8 @@
   async function loadShoots(){
     let dynamicShoots = [];
     try{
-      const res = await fetch('/.netlify/functions/shoots-list');
+     const res = await fetch('/.netlify/functions/shoots-list?t=' + Date.now());
+
       if(res.ok){
         const data = await res.json();
         dynamicShoots = data.shoots || [];
