@@ -119,6 +119,10 @@
   .edit-photo-card.dragging{
     opacity:0.35;
   }
+  .edit-photo-placeholder{
+    border:2px dashed var(--amber); border-radius:8px; background:transparent;
+    aspect-ratio: 4/3.85;
+  }
   .edit-photo-thumb{ aspect-ratio:4/3; background:var(--asphalt-2); overflow:hidden; pointer-events:none; }
   .edit-photo-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
   .edit-photo-controls-row{ padding:8px 10px 10px; display:flex; flex-direction:column; gap:6px; }
@@ -215,6 +219,7 @@
 <script>
   let allShoots = [];
   let editingShootId = null;
+  let pendingDropTarget = null;
 
   netlifyIdentity.on('init', user => {
     updateUI(user);
@@ -330,6 +335,7 @@
   function handleDragStart(e) {
     e.currentTarget.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
+    pendingDropTarget = null;
   }
 
   function handleGridDragOver(e) {
@@ -338,36 +344,73 @@
     const dragging = container.querySelector('.edit-photo-card.dragging');
     if (!dragging) return;
 
-    const afterElement = getDragAfterElement(container, e.clientX, e.clientY);
-    if (afterElement == null) {
-      if (container.lastElementChild !== dragging) container.appendChild(dragging);
-    } else if (afterElement !== dragging) {
-      container.insertBefore(dragging, afterElement);
-    }
-  }
-
-  function getDragAfterElement(container, x, y) {
     const cards = [...container.querySelectorAll('.edit-photo-card:not(.dragging)')];
-    let closest = { distance: Infinity, element: null, isAfter: false };
+    let closest = null;
+    let closestDistance = Infinity;
+    let closestIsAfter = false;
 
     cards.forEach(card => {
       const box = card.getBoundingClientRect();
       const cx = box.left + box.width / 2;
       const cy = box.top + box.height / 2;
-      const distance = Math.hypot(x - cx, y - cy);
-      if (distance < closest.distance) {
-        closest = { distance, element: card, isAfter: y > cy };
+      const distance = Math.hypot(e.clientX - cx, e.clientY - cy);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closest = card;
+        closestIsAfter = e.clientY > cy;
       }
     });
 
-    if (!closest.element) return null;
-    return closest.isAfter ? closest.element.nextElementSibling : closest.element;
+    if (!closest || closest === pendingDropTarget) return;
+    pendingDropTarget = closest;
+
+    const allCards = [...container.children];
+    const firstRects = new Map(allCards.map(c => [c, c.getBoundingClientRect()]));
+
+    let placeholder = container.querySelector('.edit-photo-placeholder');
+    if (!placeholder) {
+      placeholder = document.createElement('div');
+      placeholder.className = 'edit-photo-placeholder';
+    } else {
+      placeholder.remove();
+    }
+
+    if (closestIsAfter) {
+      closest.after(placeholder);
+    } else {
+      closest.before(placeholder);
+    }
+
+    allCards.forEach(card => {
+      if (card === dragging) return;
+      const first = firstRects.get(card);
+      const last = card.getBoundingClientRect();
+      const dx = first.left - last.left;
+      const dy = first.top - last.top;
+      if (dx || dy) {
+        card.style.transition = 'none';
+        card.style.transform = `translate(${dx}px, ${dy}px)`;
+        requestAnimationFrame(() => {
+          card.style.transition = 'transform .25s cubic-bezier(.22,1,.36,1)';
+          card.style.transform = '';
+        });
+      }
+    });
   }
 
   function handleDragEnd(e) {
-    e.currentTarget.classList.remove('dragging');
-    const shoot = allShoots.find(s => s.id === editingShootId);
     const container = document.getElementById('editPhotoList');
+    const dragging = e.currentTarget;
+    const placeholder = container.querySelector('.edit-photo-placeholder');
+
+    if (placeholder) {
+      placeholder.replaceWith(dragging);
+    }
+
+    dragging.classList.remove('dragging');
+    pendingDropTarget = null;
+
+    const shoot = allShoots.find(s => s.id === editingShootId);
     shoot.photoKeys = [...container.querySelectorAll('.edit-photo-card')].map(card => card.dataset.key);
   }
 
