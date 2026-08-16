@@ -459,7 +459,7 @@ async function addPhotosToShoot() {
     });
   }
 
-  async function submitShoot(){
+async function submitShoot(){
   const title = document.getElementById('shootTitle').value.trim();
   const date = document.getElementById('shootDate').value;
   const files = document.getElementById('shootPhotos').files;
@@ -472,97 +472,71 @@ async function addPhotosToShoot() {
   submitBtn.disabled = true;
   statusEl.className = 'status working';
 
- try{
-  const allPhotos = [];
-  for(let i = 0; i < files.length; i++){
-    statusEl.textContent = `Processing photo ${i+1} of ${files.length}...`;
-    allPhotos.push(await resizeImage(files[i]));
-  }
+  try{
+    const allPhotos = [];
+    for(let i = 0; i < files.length; i++){
+      statusEl.textContent = `Processing photo ${i+1} of ${files.length}...`;
+      allPhotos.push(await resizeImage(files[i]));
+    }
 
-  const user = netlifyIdentity.currentUser();
-  const token = await user.jwt();
+    const user = netlifyIdentity.currentUser();
+    const token = await user.jwt();
 
-  statusEl.textContent = `Uploading photo 1 of ${allPhotos.length}...`;
-  const res = await fetch('/.netlify/functions/shoots-add', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + token
-    },
-    body: JSON.stringify({ title, date, photos: [allPhotos[0]] })
-  });
+    const slug = title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const tempShootId = `${slug}-${Date.now()}`;
+    const photoKeys = [];
 
-  if(!res.ok){
-    const errText = await res.text();
-    throw new Error(errText || ('Server returned ' + res.status));
-  }
+    for(let i = 0; i < allPhotos.length; i++){
+      statusEl.textContent = `Uploading photo ${i+1} of ${allPhotos.length}...`;
+      const key = `${tempShootId}/${i}.jpg`;
 
-const data = await res.json();
-const shootId = data.shootId;
+      const uploadRes = await fetch('/.netlify/functions/photo-upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ key, photo: allPhotos[i] })
+      });
 
-statusEl.textContent = 'Confirming shoot was created...';
-let confirmed = false;
-for (let check = 0; check < 15; check++) {
-  const checkRes = await fetch('/.netlify/functions/shoots-list?t=' + Date.now());
-  const checkData = await checkRes.json();
-  if (checkData.shoots.some(s => s.id === shootId)) {
-    confirmed = true;
-    break;
-  }
-  await new Promise(resolve => setTimeout(resolve, 1000));
-}
+      if(!uploadRes.ok){
+        const errText = await uploadRes.text();
+        throw new Error(`Photo ${i+1} failed: ` + (errText || ('Server returned ' + uploadRes.status)));
+      }
 
-if (!confirmed) {
-  throw new Error('Shoot creation could not be confirmed. Please try again.');
-}
+      photoKeys.push(key);
+    }
 
-for(let i = 1; i < allPhotos.length; i++){
-
-  statusEl.textContent = `Uploading photo ${i+1} of ${allPhotos.length}...`;
-
-  let photoRes;
-  let attempts = 0;
-  const maxAttempts = 6;
-
-  while (attempts < maxAttempts) {
-    photoRes = await fetch('/.netlify/functions/shoots-add-photos', {
+    statusEl.textContent = 'Finalizing shoot...';
+    const finalizeRes = await fetch('/.netlify/functions/shoots-finalize', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + token
       },
-      body: JSON.stringify({ shootId, photos: [allPhotos[i]] })
+      body: JSON.stringify({ title, date, photoKeys })
     });
 
-    if (photoRes.ok) break;
-
-    attempts++;
-    if (attempts < maxAttempts) {
-      statusEl.textContent = `Photo ${i+1} retrying... (${attempts}/${maxAttempts})`;
-      await new Promise(resolve => setTimeout(resolve, 1500 * attempts));
-      continue;
+    if(!finalizeRes.ok){
+      const errText = await finalizeRes.text();
+      throw new Error(errText || ('Server returned ' + finalizeRes.status));
     }
 
-    const errText = await photoRes.text();
-    throw new Error(`Photo ${i+1} failed after ${maxAttempts} attempts: ` + (errText || ('Server returned ' + photoRes.status)));
+    statusEl.textContent = 'Shoot added! View it below.';
+    statusEl.className = 'status ok';
+    document.getElementById('shootTitle').value = '';
+    document.getElementById('shootPhotos').value = '';
+    document.getElementById('previewStrip').innerHTML = '';
+    loadShoots();
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = 'Something went wrong: ' + err.message;
+    statusEl.className = 'status err';
+  }finally{
+    submitBtn.disabled = false;
   }
 }
 
-
-  statusEl.textContent = 'Shoot added! View it below.';
-  statusEl.className = 'status ok';
-  document.getElementById('shootTitle').value = '';
-  document.getElementById('shootPhotos').value = '';
-  document.getElementById('previewStrip').innerHTML = '';
-  loadShoots();
-}catch(err){
-  console.error(err);
-  statusEl.textContent = 'Something went wrong: ' + err.message;
-  statusEl.className = 'status err';
-}finally{
-  submitBtn.disabled = false;
-}
-}
 </script>
 </body>
 </html>
