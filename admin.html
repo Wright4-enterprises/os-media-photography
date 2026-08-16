@@ -81,11 +81,14 @@
     overflow:hidden; cursor:pointer; transition:transform .2s ease;
   }
   .shoot-tile:hover{ transform:translateY(-3px); }
+  .shoot-tile.is-archived{ opacity:0.45; }
+  .shoot-tile.is-archived:hover{ opacity:0.7; }
   .shoot-tile-cover{ aspect-ratio:4/3; background:var(--asphalt-3); overflow:hidden; }
   .shoot-tile-cover img{ width:100%; height:100%; object-fit:cover; display:block; }
   .shoot-tile-meta{ padding:12px 14px 14px; }
   .shoot-tile-title{ font-family:'Oswald', sans-serif; font-weight:600; font-size:15px; color:var(--white); text-transform:uppercase; }
   .shoot-tile-date{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--chrome-dim); margin-top:4px; }
+  .shoot-tile-flags{ font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--amber); margin-top:4px; text-transform:uppercase; }
   .edit-icon{
     position:absolute; top:8px; right:8px; width:32px; height:32px; border-radius:50%;
     background:rgba(21,19,15,0.85); border:1px solid var(--line); color:var(--white);
@@ -115,8 +118,8 @@
   .edit-photo-labels{ display:flex; gap:14px; align-items:center; font-size:12px; color:var(--chrome-dim); flex:1; }
   .edit-photo-labels label{ display:flex; align-items:center; gap:5px; margin:0; font-weight:400; font-size:12px; color:var(--chrome-dim); }
 
-  .edit-actions{ display:flex; gap:10px; margin-top:26px; }
-  .edit-actions .btn{ flex:1; }
+  .edit-actions{ display:flex; gap:10px; margin-top:26px; flex-wrap:wrap; }
+  .edit-actions .btn{ flex:1; min-width:120px; }
 </style>
 </head>
 <body>
@@ -160,6 +163,11 @@
       <div id="shootsGrid" class="shoots-grid"></div>
     </div>
 
+    <div class="manage-section" id="archivedSection">
+      <h2>Archived Shoots</h2>
+      <div id="archivedGrid" class="shoots-grid"></div>
+    </div>
+
     <div class="manage-section" id="editView">
       <span class="edit-back" onclick="closeEditShoot()">&larr; Back to all shoots</span>
 
@@ -172,17 +180,18 @@
 
         <label>Photos (use arrows to reorder, radio to set cover, checkbox for homepage)</label>
         <div class="edit-photo-list" id="editPhotoList"></div>
-<label for="editAddPhotos">Add more photos</label>
-<input type="file" id="editAddPhotos" accept="image/*" multiple>
-<button class="btn btn-secondary btn-small" style="margin-top:10px;" onclick="addPhotosToShoot()">Upload selected photos</button>
-<div class="status" id="editAddStatus"></div>
 
- <div class="edit-actions">
-  <button class="btn" id="editSaveBtn" onclick="saveEditedShoot()">Save changes</button>
-  <button class="btn btn-secondary" id="hideBtn" onclick="toggleHidden()">Hide from gallery</button>
-  <button class="btn btn-secondary" id="archiveBtn" onclick="toggleArchived()">Archive shoot</button>
-  <button class="btn btn-danger" onclick="deleteCurrentShoot()">Delete shoot</button>
-</div>
+        <label for="editAddPhotos">Add more photos</label>
+        <input type="file" id="editAddPhotos" accept="image/*" multiple>
+        <button class="btn btn-secondary btn-small" style="margin-top:10px;" onclick="addPhotosToShoot()">Upload selected photos</button>
+        <div class="status" id="editAddStatus"></div>
+
+        <div class="edit-actions">
+          <button class="btn" id="editSaveBtn" onclick="saveEditedShoot()">Save changes</button>
+          <button class="btn btn-secondary" id="hideBtn" onclick="toggleHidden()">Hide from gallery</button>
+          <button class="btn btn-secondary" id="archiveBtn" onclick="toggleArchived()">Archive shoot</button>
+          <button class="btn btn-danger" onclick="deleteCurrentShoot()">Delete shoot</button>
+        </div>
       </div>
     </div>
   </div>
@@ -216,22 +225,44 @@
     renderShootsGrid();
   }
 
-  function renderShootsGrid() {
-    const grid = document.getElementById('shootsGrid');
-    if (!allShoots.length) {
-      grid.innerHTML = '<p>No shoots yet.</p>';
-      return;
-    }
-    grid.innerHTML = allShoots.map(shoot => `
-      <div class="shoot-tile" onclick="openEditShoot('${shoot.id}')">
+  function shootTileHTML(shoot) {
+    const flags = [];
+    if (shoot.hidden) flags.push('Hidden');
+    if (shoot.archived) flags.push('Archived');
+    return `
+      <div class="shoot-tile ${shoot.archived ? 'is-archived' : ''}" onclick="openEditShoot('${shoot.id}')">
         <div class="edit-icon">&#9998;</div>
         <div class="shoot-tile-cover"><img src="${shoot.coverPhoto ? '/.netlify/functions/photo?key=' + encodeURIComponent(shoot.coverPhoto) : shoot.photos[0]}" alt="${shoot.title}"></div>
         <div class="shoot-tile-meta">
           <div class="shoot-tile-title">${shoot.title}</div>
           <div class="shoot-tile-date">${shoot.date} &middot; ${shoot.photos.length} photo${shoot.photos.length === 1 ? '' : 's'}</div>
+          ${flags.length ? `<div class="shoot-tile-flags">${flags.join(' &middot; ')}</div>` : ''}
         </div>
       </div>
-    `).join('');
+    `;
+  }
+
+  function renderShootsGrid() {
+    const grid = document.getElementById('shootsGrid');
+    const archivedGrid = document.getElementById('archivedGrid');
+    const archivedSection = document.getElementById('archivedSection');
+
+    const active = allShoots.filter(s => !s.archived);
+    const archived = allShoots.filter(s => s.archived);
+
+    if (!active.length) {
+      grid.innerHTML = '<p>No shoots yet.</p>';
+    } else {
+      grid.innerHTML = active.map(shootTileHTML).join('');
+    }
+
+    if (archived.length) {
+      archivedSection.style.display = 'block';
+      archivedGrid.innerHTML = archived.map(shootTileHTML).join('');
+    } else {
+      archivedSection.style.display = 'none';
+      archivedGrid.innerHTML = '';
+    }
   }
 
   function openEditShoot(id) {
@@ -242,8 +273,10 @@
     document.getElementById('editTitle').value = shoot.title;
     document.getElementById('editDate').value = shoot.date;
     renderEditPhotoList(shoot);
+    updateHideArchiveButtons(shoot);
 
     document.getElementById('gridView').style.display = 'none';
+    document.getElementById('archivedSection').style.display = 'none';
     document.getElementById('editView').classList.add('active');
     window.scrollTo(0,0);
   }
@@ -317,52 +350,53 @@
     allShoots[shootIndex] = data.shoot;
     renderEditPhotoList(data.shoot);
   }
-async function addPhotosToShoot() {
-  const files = document.getElementById('editAddPhotos').files;
-  const statusEl = document.getElementById('editAddStatus');
 
-  if (files.length === 0) {
-    statusEl.textContent = 'Pick at least one photo first.';
-    statusEl.className = 'status err';
-    return;
-  }
+  async function addPhotosToShoot() {
+    const files = document.getElementById('editAddPhotos').files;
+    const statusEl = document.getElementById('editAddStatus');
 
-  statusEl.className = 'status working';
-
-  try {
-    const newPhotos = [];
-    for (let i = 0; i < files.length; i++) {
-      statusEl.textContent = `Processing photo ${i+1} of ${files.length}...`;
-      newPhotos.push(await resizeImage(files[i]));
+    if (files.length === 0) {
+      statusEl.textContent = 'Pick at least one photo first.';
+      statusEl.className = 'status err';
+      return;
     }
 
-    statusEl.textContent = 'Uploading...';
-    const headers = await getAuthHeader();
-    const res = await fetch('/.netlify/functions/shoots-add-photos', {
-      method: 'POST',
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ shootId: editingShootId, photos: newPhotos })
-    });
+    statusEl.className = 'status working';
 
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(errText || ('Server returned ' + res.status));
+    try {
+      const newPhotos = [];
+      for (let i = 0; i < files.length; i++) {
+        statusEl.textContent = `Processing photo ${i+1} of ${files.length}...`;
+        newPhotos.push(await resizeImage(files[i]));
+      }
+
+      statusEl.textContent = 'Uploading...';
+      const headers = await getAuthHeader();
+      const res = await fetch('/.netlify/functions/shoots-add-photos', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shootId: editingShootId, photos: newPhotos })
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || ('Server returned ' + res.status));
+      }
+
+      const data = await res.json();
+      const shootIndex = allShoots.findIndex(s => s.id === editingShootId);
+      allShoots[shootIndex] = data.shoot;
+      renderEditPhotoList(data.shoot);
+
+      statusEl.textContent = 'Photos added!';
+      statusEl.className = 'status ok';
+      document.getElementById('editAddPhotos').value = '';
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = 'Something went wrong: ' + err.message;
+      statusEl.className = 'status err';
     }
-
-    const data = await res.json();
-    const shootIndex = allShoots.findIndex(s => s.id === editingShootId);
-    allShoots[shootIndex] = data.shoot;
-    renderEditPhotoList(data.shoot);
-
-    statusEl.textContent = 'Photos added!';
-    statusEl.className = 'status ok';
-    document.getElementById('editAddPhotos').value = '';
-  } catch (err) {
-    console.error(err);
-    statusEl.textContent = 'Something went wrong: ' + err.message;
-    statusEl.className = 'status err';
   }
-}
 
   async function saveEditedShoot() {
     const btn = document.getElementById('editSaveBtn');
@@ -404,6 +438,41 @@ async function addPhotosToShoot() {
     setTimeout(() => { btn.textContent = 'Save changes'; btn.style.background = ''; btn.disabled = false; }, 1500);
   }
 
+  async function toggleHidden() {
+    const shoot = allShoots.find(s => s.id === editingShootId);
+    const newHidden = !shoot.hidden;
+
+    const headers = await getAuthHeader();
+    await fetch('/.netlify/functions/shoots-update', {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shootId: editingShootId, hidden: newHidden })
+    });
+
+    shoot.hidden = newHidden;
+    updateHideArchiveButtons(shoot);
+  }
+
+  async function toggleArchived() {
+    const shoot = allShoots.find(s => s.id === editingShootId);
+    const newArchived = !shoot.archived;
+
+    const headers = await getAuthHeader();
+    await fetch('/.netlify/functions/shoots-update', {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shootId: editingShootId, archived: newArchived })
+    });
+
+    shoot.archived = newArchived;
+    updateHideArchiveButtons(shoot);
+  }
+
+  function updateHideArchiveButtons(shoot) {
+    document.getElementById('hideBtn').textContent = shoot.hidden ? 'Unhide from gallery' : 'Hide from gallery';
+    document.getElementById('archiveBtn').textContent = shoot.archived ? 'Unarchive shoot' : 'Archive shoot';
+  }
+
   async function deleteCurrentShoot() {
     if (!confirm('Delete this entire shoot permanently? This cannot be undone.')) return;
     const headers = await getAuthHeader();
@@ -414,12 +483,7 @@ async function addPhotosToShoot() {
     });
     closeEditShoot();
   }
-<div class="edit-actions">
-  <button class="btn" id="editSaveBtn" onclick="saveEditedShoot()">Save changes</button>
-  <button class="btn btn-secondary" id="hideBtn" onclick="toggleHidden()">Hide from gallery</button>
-  <button class="btn btn-secondary" id="archiveBtn" onclick="toggleArchived()">Archive shoot</button>
-  <button class="btn btn-danger" onclick="deleteCurrentShoot()">Delete shoot</button>
-</div>
+
   netlifyIdentity.on('login', () => loadShoots());
   netlifyIdentity.on('init', user => { if (user) loadShoots(); });
 
@@ -466,85 +530,83 @@ async function addPhotosToShoot() {
     });
   }
 
-async function submitShoot(){
-  const title = document.getElementById('shootTitle').value.trim();
-  const date = document.getElementById('shootDate').value;
-  const files = document.getElementById('shootPhotos').files;
-  const statusEl = document.getElementById('status');
-  const submitBtn = document.getElementById('submitBtn');
+  async function submitShoot(){
+    const title = document.getElementById('shootTitle').value.trim();
+    const date = document.getElementById('shootDate').value;
+    const files = document.getElementById('shootPhotos').files;
+    const statusEl = document.getElementById('status');
+    const submitBtn = document.getElementById('submitBtn');
 
-  if(!title){ statusEl.textContent = 'Give the shoot a name first.'; statusEl.className = 'status err'; return; }
-  if(files.length === 0){ statusEl.textContent = 'Pick at least one photo.'; statusEl.className = 'status err'; return; }
+    if(!title){ statusEl.textContent = 'Give the shoot a name first.'; statusEl.className = 'status err'; return; }
+    if(files.length === 0){ statusEl.textContent = 'Pick at least one photo.'; statusEl.className = 'status err'; return; }
 
-  submitBtn.disabled = true;
-  statusEl.className = 'status working';
+    submitBtn.disabled = true;
+    statusEl.className = 'status working';
 
-  try{
-    const allPhotos = [];
-    for(let i = 0; i < files.length; i++){
-      statusEl.textContent = `Processing photo ${i+1} of ${files.length}...`;
-      allPhotos.push(await resizeImage(files[i]));
-    }
+    try{
+      const allPhotos = [];
+      for(let i = 0; i < files.length; i++){
+        statusEl.textContent = `Processing photo ${i+1} of ${files.length}...`;
+        allPhotos.push(await resizeImage(files[i]));
+      }
 
-    const user = netlifyIdentity.currentUser();
-    const token = await user.jwt();
+      const user = netlifyIdentity.currentUser();
+      const token = await user.jwt();
 
-    const slug = title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    const tempShootId = `${slug}-${Date.now()}`;
-    const photoKeys = [];
+      const slug = title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const tempShootId = `${slug}-${Date.now()}`;
+      const photoKeys = [];
 
-    for(let i = 0; i < allPhotos.length; i++){
-      statusEl.textContent = `Uploading photo ${i+1} of ${allPhotos.length}...`;
-      const key = `${tempShootId}/${i}.jpg`;
+      for(let i = 0; i < allPhotos.length; i++){
+        statusEl.textContent = `Uploading photo ${i+1} of ${allPhotos.length}...`;
+        const key = `${tempShootId}/${i}.jpg`;
 
-      const uploadRes = await fetch('/.netlify/functions/photo-upload', {
+        const uploadRes = await fetch('/.netlify/functions/photo-upload', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({ key, photo: allPhotos[i] })
+        });
+
+        if(!uploadRes.ok){
+          const errText = await uploadRes.text();
+          throw new Error(`Photo ${i+1} failed: ` + (errText || ('Server returned ' + uploadRes.status)));
+        }
+
+        photoKeys.push(key);
+      }
+
+      statusEl.textContent = 'Finalizing shoot...';
+      const finalizeRes = await fetch('/.netlify/functions/shoots-finalize', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ' + token
         },
-        body: JSON.stringify({ key, photo: allPhotos[i] })
+        body: JSON.stringify({ title, date, photoKeys })
       });
 
-      if(!uploadRes.ok){
-        const errText = await uploadRes.text();
-        throw new Error(`Photo ${i+1} failed: ` + (errText || ('Server returned ' + uploadRes.status)));
+      if(!finalizeRes.ok){
+        const errText = await finalizeRes.text();
+        throw new Error(errText || ('Server returned ' + finalizeRes.status));
       }
 
-      photoKeys.push(key);
+      statusEl.textContent = 'Shoot added! View it below.';
+      statusEl.className = 'status ok';
+      document.getElementById('shootTitle').value = '';
+      document.getElementById('shootPhotos').value = '';
+      document.getElementById('previewStrip').innerHTML = '';
+      loadShoots();
+    }catch(err){
+      console.error(err);
+      statusEl.textContent = 'Something went wrong: ' + err.message;
+      statusEl.className = 'status err';
+    }finally{
+      submitBtn.disabled = false;
     }
-
-    statusEl.textContent = 'Finalizing shoot...';
-    const finalizeRes = await fetch('/.netlify/functions/shoots-finalize', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
-      },
-      body: JSON.stringify({ title, date, photoKeys })
-    });
-
-    if(!finalizeRes.ok){
-      const errText = await finalizeRes.text();
-      throw new Error(errText || ('Server returned ' + finalizeRes.status));
-    }
-
-    statusEl.textContent = 'Shoot added! View it below.';
-    statusEl.className = 'status ok';
-    document.getElementById('shootTitle').value = '';
-    document.getElementById('shootPhotos').value = '';
-    document.getElementById('previewStrip').innerHTML = '';
-    loadShoots();
-  }catch(err){
-    console.error(err);
-    statusEl.textContent = 'Something went wrong: ' + err.message;
-    statusEl.className = 'status err';
-  }finally{
-    submitBtn.disabled = false;
   }
-}
-
 </script>
 </body>
 </html>
-
