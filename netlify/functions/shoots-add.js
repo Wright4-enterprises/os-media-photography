@@ -33,7 +33,8 @@ try {
     return new Response('A shoot needs a title and at least one photo.', { status: 400 });
   }
 
-  const shootsStore = getStore('shoots');
+ const shootsStore = getStore('shoots', { consistency: 'strong' });
+
 
   // Build a URL-safe id from the title + timestamp so two shoots never collide.
   const slug = title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
