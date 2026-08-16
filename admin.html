@@ -504,10 +504,14 @@ statusEl.textContent = 'Finalizing shoot...';
 await new Promise(resolve => setTimeout(resolve, 3000));
 
 for(let i = 1; i < allPhotos.length; i++){
+  statusEl.textContent = `Uploading photo ${i+1} of ${allPhotos.length}...`;
 
-    statusEl.textContent = `Uploading photo ${i+1} of ${allPhotos.length}...`;
+  let photoRes;
+  let attempts = 0;
+  const maxAttempts = 6;
 
-    const photoRes = await fetch('/.netlify/functions/shoots-add-photos', {
+  while (attempts < maxAttempts) {
+    photoRes = await fetch('/.netlify/functions/shoots-add-photos', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -516,11 +520,20 @@ for(let i = 1; i < allPhotos.length; i++){
       body: JSON.stringify({ shootId, photos: [allPhotos[i]] })
     });
 
-    if(!photoRes.ok){
-      const errText = await photoRes.text();
-      throw new Error(`Photo ${i+1} failed: ` + (errText || ('Server returned ' + photoRes.status)));
+    if (photoRes.ok) break;
+
+    attempts++;
+    if (attempts < maxAttempts) {
+      statusEl.textContent = `Photo ${i+1} retrying... (${attempts}/${maxAttempts})`;
+      await new Promise(resolve => setTimeout(resolve, 1500 * attempts));
+      continue;
     }
+
+    const errText = await photoRes.text();
+    throw new Error(`Photo ${i+1} failed after ${maxAttempts} attempts: ` + (errText || ('Server returned ' + photoRes.status)));
   }
+}
+
 
   statusEl.textContent = 'Shoot added! View it below.';
   statusEl.className = 'status ok';
