@@ -460,57 +460,85 @@ async function addPhotosToShoot() {
   }
 
   async function submitShoot(){
-    const title = document.getElementById('shootTitle').value.trim();
-    const date = document.getElementById('shootDate').value;
-    const files = document.getElementById('shootPhotos').files;
-    const statusEl = document.getElementById('status');
-    const submitBtn = document.getElementById('submitBtn');
+  const title = document.getElementById('shootTitle').value.trim();
+  const date = document.getElementById('shootDate').value;
+  const files = document.getElementById('shootPhotos').files;
+  const statusEl = document.getElementById('status');
+  const submitBtn = document.getElementById('submitBtn');
 
-    if(!title){ statusEl.textContent = 'Give the shoot a name first.'; statusEl.className = 'status err'; return; }
-    if(files.length === 0){ statusEl.textContent = 'Pick at least one photo.'; statusEl.className = 'status err'; return; }
+  if(!title){ statusEl.textContent = 'Give the shoot a name first.'; statusEl.className = 'status err'; return; }
+  if(files.length === 0){ statusEl.textContent = 'Pick at least one photo.'; statusEl.className = 'status err'; return; }
 
-    submitBtn.disabled = true;
-    statusEl.className = 'status working';
+  submitBtn.disabled = true;
+  statusEl.className = 'status working';
 
-    try{
-      const photos = [];
-      for(let i = 0; i < files.length; i++){
-        statusEl.textContent = `Processing photo ${i+1} of ${files.length}...`;
-        photos.push(await resizeImage(files[i]));
-      }
+  const BATCH_SIZE = 4;
 
-      statusEl.textContent = 'Uploading...';
-      const user = netlifyIdentity.currentUser();
-      const token = await user.jwt();
+  try{
+    const allPhotos = [];
+    for(let i = 0; i < files.length; i++){
+      statusEl.textContent = `Processing photo ${i+1} of ${files.length}...`;
+      allPhotos.push(await resizeImage(files[i]));
+    }
 
-      const res = await fetch('/.netlify/functions/shoots-add', {
+    const user = netlifyIdentity.currentUser();
+    const token = await user.jwt();
+
+    statusEl.textContent = `Uploading batch 1 of ${Math.ceil(allPhotos.length / BATCH_SIZE)}...`;
+    const firstBatch = allPhotos.slice(0, BATCH_SIZE);
+    const res = await fetch('/.netlify/functions/shoots-add', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ title, date, photos: firstBatch })
+    });
+
+    if(!res.ok){
+      const errText = await res.text();
+      throw new Error(errText || ('Server returned ' + res.status));
+    }
+
+    const data = await res.json();
+    const shootId = data.shootId;
+
+    let batchNum = 2;
+    for(let i = BATCH_SIZE; i < allPhotos.length; i += BATCH_SIZE){
+      const batch = allPhotos.slice(i, i + BATCH_SIZE);
+      statusEl.textContent = `Uploading batch ${batchNum} of ${Math.ceil(allPhotos.length / BATCH_SIZE)}...`;
+
+      const batchRes = await fetch('/.netlify/functions/shoots-add-photos', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ' + token
         },
-        body: JSON.stringify({ title, date, photos })
+        body: JSON.stringify({ shootId, photos: batch })
       });
 
-      if(!res.ok){
-        const errText = await res.text();
-        throw new Error(errText || ('Server returned ' + res.status));
+      if(!batchRes.ok){
+        const errText = await batchRes.text();
+        throw new Error(errText || ('Server returned ' + batchRes.status));
       }
-
-      statusEl.textContent = 'Shoot added! View it below.';
-      statusEl.className = 'status ok';
-      document.getElementById('shootTitle').value = '';
-      document.getElementById('shootPhotos').value = '';
-      document.getElementById('previewStrip').innerHTML = '';
-      loadShoots();
-    }catch(err){
-      console.error(err);
-      statusEl.textContent = 'Something went wrong: ' + err.message;
-      statusEl.className = 'status err';
-    }finally{
-      submitBtn.disabled = false;
+      batchNum++;
     }
+
+    statusEl.textContent = 'Shoot added! View it below.';
+    statusEl.className = 'status ok';
+    document.getElementById('shootTitle').value = '';
+    document.getElementById('shootPhotos').value = '';
+    document.getElementById('previewStrip').innerHTML = '';
+    loadShoots();
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = 'Something went wrong: ' + err.message;
+    statusEl.className = 'status err';
+  }finally{
+    submitBtn.disabled = false;
   }
+}
+
 </script>
 </body>
 </html>
