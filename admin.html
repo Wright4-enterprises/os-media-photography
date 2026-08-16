@@ -497,13 +497,27 @@ async function addPhotosToShoot() {
     throw new Error(errText || ('Server returned ' + res.status));
   }
 
- const data = await res.json();
+const data = await res.json();
 const shootId = data.shootId;
 
-statusEl.textContent = 'Finalizing shoot...';
-await new Promise(resolve => setTimeout(resolve, 3000));
+statusEl.textContent = 'Confirming shoot was created...';
+let confirmed = false;
+for (let check = 0; check < 15; check++) {
+  const checkRes = await fetch('/.netlify/functions/shoots-list?t=' + Date.now());
+  const checkData = await checkRes.json();
+  if (checkData.shoots.some(s => s.id === shootId)) {
+    confirmed = true;
+    break;
+  }
+  await new Promise(resolve => setTimeout(resolve, 1000));
+}
+
+if (!confirmed) {
+  throw new Error('Shoot creation could not be confirmed. Please try again.');
+}
 
 for(let i = 1; i < allPhotos.length; i++){
+
   statusEl.textContent = `Uploading photo ${i+1} of ${allPhotos.length}...`;
 
   let photoRes;
