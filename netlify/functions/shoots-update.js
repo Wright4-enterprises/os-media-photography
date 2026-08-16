@@ -29,7 +29,8 @@ export default async (req, context) => {
     return new Response('A shootId is required.', { status: 400 });
   }
 
-  const shootsStore = getStore('shoots');
+  const shootsStore = getStore('shoots', { consistency: 'strong' });
+
 
   const manifestRaw = await shootsStore.get('manifest.json');
   const manifest = manifestRaw ? JSON.parse(manifestRaw) : [];
