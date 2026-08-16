@@ -104,7 +104,9 @@
 </div>
 
 <script>
+  let allShoots = [];
   netlifyIdentity.on('init', user => {
+
     updateUI(user);
   });
   netlifyIdentity.on('login', user => {
@@ -121,10 +123,12 @@ async function getAuthHeader() {
 }
 
 async function loadShoots() {
- const res = await fetch('/.netlify/functions/shoots-list?t=' + Date.now());
+  const res = await fetch('/.netlify/functions/shoots-list?t=' + Date.now());
   const data = await res.json();
+  allShoots = data.shoots;
   renderShoots(data.shoots);
 }
+
 
 function renderShoots(shoots) {
   const container = document.getElementById('shootsList');
