@@ -24,7 +24,7 @@ export default async (req, context) => {
     return new Response('Invalid request body.', { status: 400 });
   }
 
-  const { shootId, title, date, coverPhoto, featuredPhotos } = body;
+  const { shootId, title, date, coverPhoto, featuredPhotos, photoKeys, deletePhotoKey } = body;
   if (!shootId) {
     return new Response('A shootId is required.', { status: 400 });
   }
@@ -45,6 +45,18 @@ export default async (req, context) => {
   if (date !== undefined) shoot.date = date;
   if (coverPhoto !== undefined) shoot.coverPhoto = coverPhoto;
   if (featuredPhotos !== undefined) shoot.featuredPhotos = featuredPhotos;
+  if (photoKeys !== undefined) shoot.photoKeys = photoKeys;
+
+  if (deletePhotoKey) {
+    await shootsStore.delete(deletePhotoKey);
+    shoot.photoKeys = shoot.photoKeys.filter(k => k !== deletePhotoKey);
+    if (shoot.coverPhoto === deletePhotoKey) {
+      shoot.coverPhoto = shoot.photoKeys[0] || null;
+    }
+    if (shoot.featuredPhotos) {
+      shoot.featuredPhotos = shoot.featuredPhotos.filter(k => k !== deletePhotoKey);
+    }
+  }
 
   manifest[shootIndex] = shoot;
   await shootsStore.set('manifest.json', JSON.stringify(manifest));
