@@ -315,6 +315,52 @@
     allShoots[shootIndex] = data.shoot;
     renderEditPhotoList(data.shoot);
   }
+async function addPhotosToShoot() {
+  const files = document.getElementById('editAddPhotos').files;
+  const statusEl = document.getElementById('editAddStatus');
+
+  if (files.length === 0) {
+    statusEl.textContent = 'Pick at least one photo first.';
+    statusEl.className = 'status err';
+    return;
+  }
+
+  statusEl.className = 'status working';
+
+  try {
+    const newPhotos = [];
+    for (let i = 0; i < files.length; i++) {
+      statusEl.textContent = `Processing photo ${i+1} of ${files.length}...`;
+      newPhotos.push(await resizeImage(files[i]));
+    }
+
+    statusEl.textContent = 'Uploading...';
+    const headers = await getAuthHeader();
+    const res = await fetch('/.netlify/functions/shoots-add-photos', {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shootId: editingShootId, photos: newPhotos })
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(errText || ('Server returned ' + res.status));
+    }
+
+    const data = await res.json();
+    const shootIndex = allShoots.findIndex(s => s.id === editingShootId);
+    allShoots[shootIndex] = data.shoot;
+    renderEditPhotoList(data.shoot);
+
+    statusEl.textContent = 'Photos added!';
+    statusEl.className = 'status ok';
+    document.getElementById('editAddPhotos').value = '';
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = 'Something went wrong: ' + err.message;
+    statusEl.className = 'status err';
+  }
+}
 
   async function saveEditedShoot() {
     const btn = document.getElementById('editSaveBtn');
