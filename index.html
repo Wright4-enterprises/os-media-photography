@@ -491,14 +491,10 @@
       <h2>Recent work</h2>
     </div>
     <!-- Swap any image below by replacing the file in os-media-photos/ and updating the src -->
-    <div class="gallery" data-reveal-group>
-      <div class="frame"><img src="images/14-lambo-vineyard-hero.jpg" alt="Black Lamborghini Huracan in a vineyard at golden hour"></div>
-      <div class="frame"><img src="images/10-gtr13-sunset-hero.jpg" alt="Nissan Skyline GT-R at a golf course during sunset overlooking the ocean"></div>
-      <div class="frame"><img src="images/07-skyline-mustang-reflection.jpg" alt="Nissan Skyline and Ford Mustang together at dusk with Perth skyline reflection"></div>
-      <div class="frame"><img src="images/12-mustang-garage-hero.jpg" alt="Blue Ford Mustang in a moody underground car park"></div>
-      <div class="frame"><img src="images/01-civic-night.jpg" alt="Modified orange Honda Civic at night, Perth"></div>
-      <div class="frame"><img src="images/04-m2-golden-hour.jpg" alt="Grey BMW M2 at golden hour with Fremantle port in background"></div>
-    </div>
+    <div class="gallery" data-reveal-group id="recentWorkGallery">
+  <div class="frame"><p style="color:var(--chrome-dim);">Loading...</p></div>
+</div>
+
   </div>
 </section>
 
@@ -647,5 +643,33 @@
     });
   }
 </script>
+  <script>
+  fetch('/.netlify/functions/shoots-list?t=' + Date.now())
+    .then(res => res.json())
+    .then(data => {
+      const gallery = document.getElementById('recentWorkGallery');
+      const featured = [];
+
+      data.shoots.forEach(shoot => {
+        (shoot.featuredPhotos || []).forEach(key => {
+          featured.push({
+            url: '/.netlify/functions/photo?key=' + encodeURIComponent(key),
+            alt: shoot.title
+          });
+        });
+      });
+
+      if (featured.length === 0) {
+        gallery.innerHTML = '<p style="color:var(--chrome-dim);">No featured photos yet.</p>';
+        return;
+      }
+
+      gallery.innerHTML = featured.map(p => `
+        <div class="frame"><img src="${p.url}" alt="${p.alt}"></div>
+      `).join('');
+    })
+    .catch(e => console.error('Could not load featured photos:', e));
+</script>
+
 </body>
 </html>
