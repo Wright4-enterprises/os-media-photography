@@ -24,7 +24,8 @@ export default async (req, context) => {
     return new Response('Invalid request body.', { status: 400 });
   }
 
-  const { shootId, title, date, coverPhoto, featuredPhotos, photoKeys, deletePhotoKey } = body;
+ const { shootId, title, date, coverPhoto, featuredPhotos, photoKeys, deletePhotoKey, hidden, archived } = body;
+
   if (!shootId) {
     return new Response('A shootId is required.', { status: 400 });
   }
@@ -47,6 +48,9 @@ export default async (req, context) => {
   if (coverPhoto !== undefined) shoot.coverPhoto = coverPhoto;
   if (featuredPhotos !== undefined) shoot.featuredPhotos = featuredPhotos;
   if (photoKeys !== undefined) shoot.photoKeys = photoKeys;
+  if (hidden !== undefined) shoot.hidden = hidden;
+if (archived !== undefined) shoot.archived = archived;
+
 
   if (deletePhotoKey) {
     await shootsStore.delete(deletePhotoKey);
