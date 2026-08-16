@@ -167,15 +167,34 @@ async function saveShootDetails(shootId, btn) {
   const title = card.querySelector('.shoot-title-input').value.trim();
   const date = card.querySelector('.shoot-date-input').value;
 
-  const headers = await getAuthHeader();
-  await fetch('/.netlify/functions/shoots-update', {
-    method: 'POST',
-    headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ shootId, title, date })
-  });
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
 
-  loadShoots();
+  try {
+    const headers = await getAuthHeader();
+    const res = await fetch('/.netlify/functions/shoots-update', {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shootId, title, date })
+    });
+
+    if (res.ok) {
+      btn.textContent = '✓ Saved!';
+      btn.style.background = '#4CAF50';
+    } else {
+      btn.textContent = '✗ Failed - try again';
+      btn.style.background = '#C43B3B';
+    }
+  } catch (e) {
+    btn.textContent = '✗ Failed - try again';
+    btn.style.background = '#C43B3B';
+  }
+
+  setTimeout(() => {
+    loadShoots();
+  }, 800);
 }
+
 
 async function setCoverPhoto(shootId, photoKey) {
   const headers = await getAuthHeader();
