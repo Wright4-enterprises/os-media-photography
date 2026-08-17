@@ -6,7 +6,23 @@
 <title>Terms of Service — OS Media</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
+.toggle-block{ border-bottom:1px solid var(--line); padding:20px 0; cursor:pointer; }
+  .toggle-block:first-child{ padding-top:0; }
+  .toggle-head{
+    font-family:'Oswald', sans-serif; font-weight:600; font-size:15.5px; color:var(--white);
+    text-transform:uppercase; letter-spacing:0.01em;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .toggle-icon{ font-family:'JetBrains Mono', monospace; font-size:15px; color:var(--amber); transition: transform .25s ease; }
+  .toggle-body{ max-height:0; overflow:hidden; transition: max-height .35s ease, opacity .25s ease; opacity:0; }
+  .toggle-body-inner{ padding-top:12px; font-size:14.5px; color:var(--chrome-dim); }
+  @media (hover:hover) and (pointer:fine){
+    .toggle-block:hover .toggle-body{ max-height:400px; opacity:1; }
+    .toggle-block:hover .toggle-icon{ transform:rotate(45deg); }
+  }
+  .toggle-block.is-open .toggle-body{ max-height:400px; opacity:1; }
+  .toggle-block.is-open .toggle-icon{ transform:rotate(45deg); }
+  <style>
   :root{
     --asphalt: #15130F;
     --asphalt-2: #1E1B15;
