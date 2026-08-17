@@ -50,6 +50,21 @@
 
   .rev-strip{ height:3px; background:linear-gradient(90deg, var(--amber) 0%, var(--amber) 60%, var(--crimson) 85%, var(--crimson) 100%); }
 
+  /* TAGLINE STRIP */
+  .tagline-strip{
+    background: var(--asphalt-2);
+    border-bottom: 1px solid var(--line);
+    overflow:hidden;
+    padding: 11px 0;
+  }
+  .tagline-track{
+    display:flex; gap:40px; white-space:nowrap; width:max-content;
+    font-family:'JetBrains Mono', monospace; font-size:12px; letter-spacing:0.1em;
+    text-transform:uppercase; color:var(--chrome-dim);
+  }
+  .tagline-track span{ display:flex; align-items:center; gap:40px; }
+  .tagline-track span::after{ content:'•'; color:var(--amber); margin-left:40px; }
+
   .page-head{ padding:56px 0 32px; text-align:center; }
   .eyebrow{ font-family:'JetBrains Mono', monospace; font-size:13px; letter-spacing:0.1em; color:var(--amber); text-transform:uppercase; }
   h1{ font-family:'Oswald', sans-serif; font-weight:700; text-transform:uppercase; font-size:clamp(32px,5vw,52px); margin:10px 0; color:var(--white); }
@@ -168,6 +183,17 @@
   </nav>
   <div class="rev-strip"></div>
 </header>
+
+<div class="tagline-strip">
+  <div class="wrap">
+    <div class="tagline-track">
+      <span>Perth-based automotive photography</span>
+      <span>Meets</span>
+      <span>Private shoots</span>
+      <span>Dealership work</span>
+    </div>
+  </div>
+</div>
 
 <div id="albumsView">
   <div class="wrap">
@@ -352,6 +378,28 @@
       if(shootId) openShoot(shootId);
     });
   });
+
+  (function(){
+    var track = document.querySelector('.tagline-track');
+    if(!track) return;
+
+    track.innerHTML = track.innerHTML + track.innerHTML;
+
+    var pos = 0;
+    var speed = 0.5;
+    var halfWidth = track.scrollWidth / 2;
+
+    function tick(){
+      pos -= speed;
+      if(Math.abs(pos) >= halfWidth){
+        pos = 0;
+      }
+      track.style.transform = 'translateX(' + pos + 'px)';
+      requestAnimationFrame(tick);
+    }
+
+    requestAnimationFrame(tick);
+  })();
 </script>
 
 </body>
