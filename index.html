@@ -718,7 +718,6 @@
     document.getElementById('mobileMenu').classList.remove('open');
   }
 
-  <script>
   (function(){
     var track = document.querySelector('.tagline-track');
     if(!track) return;
@@ -738,12 +737,10 @@
       requestAnimationFrame(tick);
     }
 
-    window.addEventListener('load', function(){
-      halfWidth = track.scrollWidth / 2;
-      requestAnimationFrame(tick);
-    });
+    requestAnimationFrame(tick);
   })();
-</script>
+
+
 
 
   (function(){
