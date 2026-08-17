@@ -81,7 +81,7 @@
   .hamburger.open span:nth-child(2){ opacity:0; }
   .hamburger.open span:nth-child(3){ transform: translateY(-7px) rotate(-45deg); }
   .mobile-menu{
-    display:none; flex-direction:column;
+    display:flex; flex-direction:column;
     background: var(--asphalt-2); border-bottom:1px solid var(--line);
     max-height:0; overflow:hidden; transition: max-height .3s ease;
   }
@@ -225,7 +225,8 @@
   <p>Perth-based automotive photography, shot by someone who's actually part of the scene.</p>
 </header>
 
-<section class="section wrap">
+<section class="section">
+  <div class="wrap">
   <div class="legal-block">
     <h2>Who's shooting</h2>
     <p>OS Media is run by Owen Smith, an automotive photographer based in Perth, Western Australia. Owen shoots car meets, private builds, and dealership content across the Perth metro area, with a focus on getting the details that actually matter to someone who's put time and money into their car — the stance, the lines, the paint, the little touches most photographers skip past.</p>
@@ -242,6 +243,7 @@
     <h2>Get in touch</h2>
     <p>Got a car worth shooting, or want to talk about dealership content? Reach out any time.</p>
     <a class="btn-primary" href="mailto:osmedia1@outlook.com?subject=Shoot Enquiry">Email OS Media</a>
+  </div>
   </div>
 </section>
 
