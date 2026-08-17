@@ -268,10 +268,27 @@
   </div>
 </footer>
 <script>
+  let mobileMenuJustOpened = false;
   function toggleMobileMenu(){
+    const isOpening = !document.getElementById('mobileMenu').classList.contains('open');
     document.getElementById('hamburgerBtn').classList.toggle('open');
     document.getElementById('mobileMenu').classList.toggle('open');
+    if (isOpening) {
+      mobileMenuJustOpened = true;
+      setTimeout(() => { mobileMenuJustOpened = false; }, 400);
+    }
   }
+  function closeMobileMenu(){
+    document.getElementById('hamburgerBtn').classList.remove('open');
+    document.getElementById('mobileMenu').classList.remove('open');
+  }
+  window.addEventListener('scroll', () => {
+    if (mobileMenuJustOpened) return;
+    if (document.getElementById('mobileMenu').classList.contains('open')) {
+      closeMobileMenu();
+    }
+  }, { passive: true });
+
 </script>
 </body>
 </html>
