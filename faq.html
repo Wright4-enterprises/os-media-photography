@@ -81,7 +81,7 @@
   .hamburger.open span:nth-child(2){ opacity:0; }
   .hamburger.open span:nth-child(3){ transform: translateY(-7px) rotate(-45deg); }
   .mobile-menu{
-    display:none; flex-direction:column;
+    display:flex; flex-direction:column;
     background: var(--asphalt-2); border-bottom:1px solid var(--line);
     max-height:0; overflow:hidden; transition: max-height .3s ease;
   }
@@ -240,7 +240,9 @@
   <p>Everything most people ask before booking a shoot. Can't find your answer? Just get in touch.</p>
 </header>
 
-<section class="section wrap">
+<section class="section">
+  <div class="wrap">
+
   <div class="toggle-block" onclick="toggleFAQBlock(this)">
     <div class="toggle-head">How do I book a shoot? <span class="toggle-icon">+</span></div>
     <div class="toggle-body"><div class="toggle-body-inner">Send an email through the "Get in touch" button with your car, what you're after (car meet coverage, a private shoot, or listing photos), and roughly when and where. You'll hear back to lock in a time.</div></div>
@@ -265,6 +267,7 @@
     <div class="toggle-head">Do you do dealership work? <span class="toggle-icon">+</span></div>
     <div class="toggle-body"><div class="toggle-body-inner">Yes — clean, consistent content for dealership listings is one of the core services. Get in touch to talk about ongoing or one-off dealership shoots.</div></div>
   </div>
+     </div> 
 </section>
 
 <footer>
