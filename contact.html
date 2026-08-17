@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact — OS Media</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --asphalt: #15130F;
+    --asphalt-2: #1E1B15;
+    --asphalt-3: #26221A;
+    --chrome: #D8DADE;
+    --chrome-dim: #8A8D93;
+    --amber: #D4A537;
+    --amber-deep: #A8790E;
+    --crimson: #C43B3B;
+    --white: #F7F5F0;
+    --line: #35312688;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background: var(--asphalt);
+    color: var(--chrome);
+    font-family:'Inter', sans-serif;
+    line-height:1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a{color:inherit;}
+  .wrap{max-width: 1080px; margin:0 auto; padding: 0 28px;}
+
+  nav{
+    position: sticky; top:0; z-index:50;
+    background: rgba(21,19,15,0.85);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  nav .wrap{display:flex; align-items:center; justify-content:space-between; padding:18px 28px;}
+  .brand{
+    font-family:'Oswald', sans-serif;
+    font-weight:700;
+    font-size: 19px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    text-decoration:none;
+  }
+  .brand span{color: var(--amber);}
+  .navlinks{display:none; gap:30px; font-size:13.5px; font-weight:500; list-style:none; text-transform:uppercase; letter-spacing:0.04em;}
+  .navlinks a{
+    text-decoration:none; color:var(--chrome-dim); transition:color .25s ease;
+    position: relative; padding-bottom: 2px;
+  }
+  .navlinks a:hover{color:var(--white);}
+  @media(min-width:700px){.navlinks{display:flex;}}
+  .nav-cta{
+    background: var(--amber); color:var(--asphalt);
+    padding:9px 18px; border-radius:3px;
+    font-size:13px; font-weight:600; text-decoration:none;
+    text-transform:uppercase; letter-spacing:0.03em;
+    white-space:nowrap;
+    transition: background .25s ease;
+  }
+  .nav-cta:hover{ background: #E3B84A; }
+  .nav-right{ display:flex; align-items:center; gap:14px; }
+  .hamburger{
+    display:flex; flex-direction:column; justify-content:center; gap:5px;
+    width:32px; height:32px; background:none; border:none; cursor:pointer; padding:0;
+  }
+  @media(min-width:700px){ .hamburger{ display:none; } }
+  .hamburger span{
+    display:block; width:100%; height:2px; background:var(--white);
+    transition: transform .25s ease, opacity .25s ease;
+  }
+  .hamburger.open span:nth-child(1){ transform: translateY(7px) rotate(45deg); }
+  .hamburger.open span:nth-child(2){ opacity:0; }
+  .hamburger.open span:nth-child(3){ transform: translateY(-7px) rotate(-45deg); }
+  .mobile-menu{
+    display:none; flex-direction:column;
+    background: var(--asphalt-2); border-bottom:1px solid var(--line);
+    max-height:0; overflow:hidden; transition: max-height .3s ease;
+  }
+  .mobile-menu.open{ max-height:300px; }
+  @media(min-width:700px){ .mobile-menu{ display:none !important; } }
+  .mobile-menu a{
+    display:block; padding:16px 28px; color:var(--chrome-dim);
+    text-decoration:none; font-size:14px; text-transform:uppercase; letter-spacing:0.04em;
+    border-top:1px solid var(--line);
+  }
+  .mobile-menu a:hover{ color:var(--white); }
+  .mobile-menu .nav-cta{ margin:14px 28px 18px; text-align:center; }
+
+  .rev-strip{
+    height: 3px; width: 100%;
+    background: linear-gradient(90deg, var(--amber) 0%, var(--amber) 60%, var(--crimson) 85%, var(--crimson) 100%);
+  }
+
+  header.top{ padding: 56px 0 36px; text-align:center; }
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace; font-size:12px; letter-spacing:0.16em;
+    text-transform:uppercase; color:var(--amber); margin-bottom:16px;
+  }
+  h1{
+    font-family:'Oswald', sans-serif; font-weight:700; text-transform:uppercase;
+    font-size: clamp(30px, 6vw, 44px); color:var(--white); letter-spacing:0.01em; margin-bottom:14px;
+  }
+  header.top p{ color:var(--chrome-dim); font-size:15px; max-width:52ch; margin:0 auto; }
+
+  .section{padding: 48px 0 72px;}
+  h2{
+    font-family:'Oswald', sans-serif; font-weight:600; text-transform:uppercase;
+    font-size: clamp(20px, 3.4vw, 26px); letter-spacing:0.01em; color: var(--white); margin-bottom:14px;
+  }
+  .section p{ font-size:14.5px; color:var(--chrome-dim); max-width:70ch; margin-bottom:16px; }
+  .section ul, .section ol{ margin:0 0 16px 20px; color:var(--chrome-dim); font-size:14.5px; }
+  .section li{ margin-bottom:8px; }
+  .section a.inline-link{ color:var(--amber); text-decoration:underline; }
+
+  .legal-block{ margin-bottom:36px; }
+  .legal-block:last-child{ margin-bottom:0; }
+  .updated-note{
+    font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--chrome-dim);
+    margin-bottom:36px; text-transform:uppercase; letter-spacing:0.05em;
+  }
+
+  .faq-item{ border-bottom:1px solid var(--line); padding:20px 0; }
+  .faq-item:first-child{ padding-top:0; }
+  .faq-q{
+    font-family:'Oswald', sans-serif; font-weight:600; font-size:15.5px; color:var(--white);
+    text-transform:uppercase; letter-spacing:0.01em; margin-bottom:8px;
+  }
+  .faq-a{ font-size:14.5px; color:var(--chrome-dim); }
+
+  .contact-band{
+    background: linear-gradient(135deg, var(--asphalt-2), var(--asphalt-3));
+    border: 1px solid var(--line); border-radius: 12px; padding: 40px 32px; text-align:center;
+  }
+  .contact-band h2{ margin-bottom:10px; }
+  .contact-band p{ font-size:14.5px; color:var(--chrome-dim); margin-bottom:24px; max-width:none; }
+  .contact-links{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+  .btn-primary{
+    background: var(--amber); color:var(--asphalt); padding:14px 28px; border-radius:3px;
+    text-decoration:none; font-weight:600; font-size:14px; text-transform:uppercase; letter-spacing:0.03em;
+    display: inline-block; transition: background .25s ease;
+  }
+  .btn-primary:hover{ background: #E3B84A; }
+  .btn-secondary{
+    border:1.5px solid var(--chrome-dim); color:var(--white); padding:12.5px 26px; border-radius:3px;
+    text-decoration:none; font-weight:600; font-size:14px; text-transform:uppercase; letter-spacing:0.03em;
+    display: inline-block; transition: border-color .25s ease;
+  }
+  .btn-secondary:hover{ border-color: var(--amber); }
+  .about-plate{
+    font-family:'JetBrains Mono', monospace; font-size:12.5px; color: var(--asphalt);
+    background: var(--chrome); border-radius:5px; padding: 10px 16px; display:inline-block;
+    letter-spacing:0.08em; white-space:nowrap; margin-top:20px;
+  }
+
+  footer{
+    border-top:1px solid var(--line);
+    padding: 48px 0 32px;
+    font-size:12.5px; color: var(--chrome-dim);
+  }
+  .footer-grid{ display:grid; gap:32px; margin-bottom:32px; grid-template-columns: 1fr; }
+  @media(min-width:700px){ .footer-grid{ grid-template-columns: 1.4fr 1fr 1fr; } }
+  .footer-brand{ font-family:'Oswald', sans-serif; font-weight:700; font-size:16px; color:var(--white); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:10px; }
+  .footer-brand span{ color:var(--amber); }
+  .footer-desc{ font-size:13px; color:var(--chrome-dim); max-width:32ch; text-transform:none; letter-spacing:normal; }
+  .footer-col-title{ font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--amber); margin-bottom:14px; }
+  .footer-links{ list-style:none; display:flex; flex-direction:column; gap:10px; }
+  .footer-links a{ color:var(--chrome-dim); text-decoration:none; font-size:13px; text-transform:none; letter-spacing:normal; transition:color .2s ease; }
+  .footer-links a:hover{ color:var(--amber); }
+  .footer-bottom{
+    border-top:1px solid var(--line); padding-top:20px;
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px;
+    font-size:11.5px; color:var(--chrome-dim); text-transform:uppercase; letter-spacing:0.04em;
+  }
+  ::selection{background: var(--amber); color: var(--asphalt);}
+</style>
+</head>
+<body>
+<nav>
+  <div class="wrap">
+    <a class="brand" href="index.html">
+      <svg width="24" height="18" viewBox="0 0 32 24" fill="none">
+        <path d="M2 20 L14 4" stroke="#D4A537" stroke-width="2" stroke-linecap="round"/>
+        <path d="M10 20 L22 4" stroke="#D4A537" stroke-width="2" stroke-linecap="round" opacity="0.65"/>
+        <path d="M18 20 L30 4" stroke="#D4A537" stroke-width="2" stroke-linecap="round" opacity="0.35"/>
+      </svg>
+      OS <span>MEDIA</span>
+    </a>
+    <ul class="navlinks">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="gallery.html">Gallery</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="faq.html">FAQs</a></li>
+      <li><a href="contact.html">Contact</a></li>
+    </ul>
+    <div class="nav-right">
+      <a class="nav-cta" href="mailto:osmedia1@outlook.com?subject=Shoot Enquiry">Get in touch</a>
+      <button class="hamburger" id="hamburgerBtn" onclick="toggleMobileMenu()" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="index.html">Home</a>
+    <a href="gallery.html">Gallery</a>
+    <a href="about.html">About</a>
+    <a href="faq.html">FAQs</a>
+    <a href="contact.html">Contact</a>
+    <a class="nav-cta" href="mailto:osmedia1@outlook.com?subject=Shoot Enquiry">Get in touch</a>
+  </div>
+</nav>
+<div class="rev-strip"></div>
+
+<header class="top wrap">
+  <div class="eyebrow">Contact</div>
+  <h1>Get in touch</h1>
+  <p>Got a car worth shooting, a dealership enquiry, or just a question? Reach out below.</p>
+</header>
+
+<section class="section wrap" style="padding-bottom:64px;">
+  <div class="contact-band">
+    <h2>Let's talk cars</h2>
+    <p>Based in Perth — happy to travel for the right build.</p>
+    <div class="contact-links">
+      <a class="btn-primary" href="mailto:osmedia1@outlook.com?subject=Shoot Enquiry">Email OS Media</a>
+      <a class="btn-secondary" href="https://instagram.com/0s.media" target="_blank" rel="noopener">Instagram</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-brand">OS <span>MEDIA</span></div>
+        <p class="footer-desc">Automotive photography by Owen Smith — car meets, private shoots and dealership content across Perth, WA.</p>
+      </div>
+      <div>
+        <div class="footer-col-title">Company</div>
+        <ul class="footer-links">
+          <li><a href="about.html">About</a></li>
+          <li><a href="faq.html">FAQs</a></li>
+          <li><a href="contact.html">Contact</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-col-title">Legal</div>
+        <ul class="footer-links">
+          <li><a href="privacy.html">Privacy Policy</a></li>
+          <li><a href="terms.html">Terms of Service</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div>&copy; 2026 OS Media — Owen Smith</div>
+      <div>Perth, WA</div>
+    </div>
+  </div>
+</footer>
+<script>
+  function toggleMobileMenu(){
+    document.getElementById('hamburgerBtn').classList.toggle('open');
+    document.getElementById('mobileMenu').classList.toggle('open');
+  }
+</script>
+</body>
+</html>
