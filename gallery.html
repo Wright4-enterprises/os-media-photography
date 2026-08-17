@@ -44,6 +44,7 @@
   .back-link{
     font-family:'JetBrains Mono', monospace; font-size:13px; color:var(--chrome-dim);
     display:flex; align-items:center; gap:6px;
+    background:none; border:none; cursor:pointer; padding:0;
   }
   .back-link:hover{ color:var(--amber); }
 
@@ -73,13 +74,47 @@
 
   .empty-state{ text-align:center; padding:60px 20px; color:var(--chrome-dim); }
 
+  /* Skeleton loading tiles */
+  .skeleton{
+    border:1px solid var(--line); border-radius:8px; background:var(--asphalt-2); overflow:hidden;
+  }
+  .skeleton-cover{
+    aspect-ratio:4/3;
+    background:linear-gradient(100deg, var(--asphalt-3) 30%, #332D22 50%, var(--asphalt-3) 70%);
+    background-size:200% 100%;
+    animation:shimmer 1.6s ease-in-out infinite;
+  }
+  .skeleton-meta{ padding:16px 18px 20px; }
+  .skeleton-line{
+    height:12px; border-radius:3px;
+    background:linear-gradient(100deg, var(--asphalt-3) 30%, #332D22 50%, var(--asphalt-3) 70%);
+    background-size:200% 100%;
+    animation:shimmer 1.6s ease-in-out infinite;
+  }
+  .skeleton-line.title{ width:70%; height:16px; margin-bottom:10px; }
+  .skeleton-line.info{ width:45%; }
+  @keyframes shimmer{
+    0%{ background-position:200% 0; }
+    100%{ background-position:-200% 0; }
+  }
+
   /* Single shoot view */
   #shootView{ display:none; }
   #shootView.active{ display:block; }
   #albumsView.hidden{ display:none; }
-  .shoot-head{ padding:40px 0 24px; }
+  .shoot-head{ padding:40px 0 24px; display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap; }
+  .shoot-head-left{ flex:1; min-width:200px; }
   .shoot-title{ font-family:'Oswald', sans-serif; font-weight:700; text-transform:uppercase; font-size:clamp(28px,4vw,42px); color:var(--white); margin:8px 0 4px; }
   .shoot-date{ font-family:'JetBrains Mono', monospace; font-size:13px; color:var(--chrome-dim); }
+
+  .share-btn{
+    font-family:'JetBrains Mono', monospace; font-size:12.5px; color:var(--chrome);
+    background:var(--asphalt-2); border:1px solid var(--line); border-radius:6px;
+    padding:10px 16px; cursor:pointer; display:flex; align-items:center; gap:7px;
+    transition:border-color .2s ease, color .2s ease; white-space:nowrap; margin-top:8px;
+  }
+  .share-btn:hover{ border-color:var(--amber); color:var(--amber); }
+  .share-btn.copied{ border-color:var(--amber); color:var(--amber); }
 
   .photo-grid{
     display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr));
@@ -112,6 +147,12 @@
   .lb-close{ top:20px; right:20px; }
   .lb-prev{ left:20px; top:50%; transform:translateY(-50%); }
   .lb-next{ right:20px; top:50%; transform:translateY(-50%); }
+  .lb-counter{
+    position:absolute; bottom:24px; left:50%; transform:translateX(-50%);
+    font-family:'JetBrains Mono', monospace; font-size:13px; color:var(--chrome-dim);
+    background:rgba(21,19,15,0.7); border:1px solid var(--line); border-radius:20px;
+    padding:6px 16px;
+  }
 
   footer{ text-align:center; padding:32px 0; color:var(--chrome-dim); font-family:'JetBrains Mono', monospace; font-size:12px; border-top:1px solid var(--line); }
 
@@ -136,16 +177,20 @@
       <p class="sub">Every job OS Media has shot, kept together by shoot — meets, private sessions, and everything in between.</p>
     </div>
     <div id="albumsGrid" class="albums"></div>
-    <div id="loadingMsg" class="loading">Loading shoots&hellip;</div>
   </div>
 </div>
 
 <div id="shootView">
   <div class="wrap">
     <div class="shoot-head">
-      <a class="back-link" href="javascript:void(0)" onclick="closeShoot()">&larr; All shoots</a>
-      <div class="shoot-title" id="shootTitle"></div>
-      <div class="shoot-date" id="shootDate"></div>
+      <div class="shoot-head-left">
+        <button class="back-link" onclick="closeShoot()">&larr; All shoots</button>
+        <div class="shoot-title" id="shootTitle"></div>
+        <div class="shoot-date" id="shootDate"></div>
+      </div>
+      <button class="share-btn" id="shareBtn" onclick="shareShoot()">
+        <span id="shareBtnText">&#128279; Share this shoot</span>
+      </button>
     </div>
     <div id="shootGrid" class="photo-grid"></div>
   </div>
@@ -156,33 +201,47 @@
   <div class="lb-prev" onclick="navLightbox(-1)">&#8249;</div>
   <img id="lightboxImg" src="" alt="">
   <div class="lb-next" onclick="navLightbox(1)">&#8250;</div>
+  <div class="lb-counter" id="lbCounter"></div>
 </div>
-
 
 <footer>OS Media — Owen Smith · Perth, WA</footer>
 
-  <script>
+<script>
   let allShoots = [];
   let currentPhotos = [];
   let currentIndex = 0;
 
+  function renderSkeletons(count){
+    const grid = document.getElementById('albumsGrid');
+    let html = '';
+    for(let i = 0; i < count; i++){
+      html += `
+        <div class="skeleton">
+          <div class="skeleton-cover"></div>
+          <div class="skeleton-meta">
+            <div class="skeleton-line title"></div>
+            <div class="skeleton-line info"></div>
+          </div>
+        </div>
+      `;
+    }
+    grid.innerHTML = html;
+  }
+
   async function loadShoots(){
+    renderSkeletons(6);
     let dynamicShoots = [];
     try{
-     const res = await fetch('/.netlify/functions/shoots-list?t=' + Date.now());
-
+      const res = await fetch('/.netlify/functions/shoots-list?t=' + Date.now());
       if(res.ok){
         const data = await res.json();
         dynamicShoots = data.shoots || [];
       }
     }catch(e){
-      // Backend not reachable (e.g. running before functions are deployed) - just show seed shoots.
       console.warn('Could not load dynamic shoots:', e);
     }
-   allShoots = dynamicShoots.filter(s => !s.hidden && !s.archived);
-
+    allShoots = dynamicShoots.filter(s => !s.hidden && !s.archived);
     renderAlbums();
-    document.getElementById('loadingMsg').style.display = 'none';
   }
 
   function renderAlbums(){
@@ -194,7 +253,6 @@
     grid.innerHTML = allShoots.map(shoot => `
       <div class="album" onclick="openShoot('${shoot.id}')">
         <div class="album-cover"><img src="${shoot.coverPhoto ? '/.netlify/functions/photo?key=' + encodeURIComponent(shoot.coverPhoto) : shoot.photos[0]}" alt="${shoot.title}" loading="lazy"></div>
-
         <div class="album-meta">
           <div class="album-title">${shoot.title}</div>
           <div class="album-info">${shoot.date} · ${shoot.photos.length} photo${shoot.photos.length === 1 ? '' : 's'}</div>
@@ -208,6 +266,8 @@
     if(!shoot) return;
     document.getElementById('shootTitle').textContent = shoot.title;
     document.getElementById('shootDate').textContent = shoot.date;
+    document.getElementById('shareBtnText').innerHTML = '&#128279; Share this shoot';
+    document.getElementById('shareBtn').classList.remove('copied');
     document.getElementById('shootGrid').innerHTML = shoot.photos.map((src, i) => `
       <div class="frame" onclick="openLightbox('${id}', ${i})"><img src="${src}" alt="${shoot.title}" loading="lazy"></div>
     `).join('');
@@ -224,12 +284,35 @@
     history.pushState({}, '', 'gallery.html');
   }
 
+  function shareShoot(){
+    const url = window.location.href;
+    const btn = document.getElementById('shareBtn');
+    const btnText = document.getElementById('shareBtnText');
+
+    if(navigator.share){
+      navigator.share({ title: document.getElementById('shootTitle').textContent, url }).catch(() => {});
+      return;
+    }
+
+    navigator.clipboard.writeText(url).then(() => {
+      btnText.innerHTML = '&#10003; Link copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btnText.innerHTML = '&#128279; Share this shoot';
+        btn.classList.remove('copied');
+      }, 2000);
+    }).catch(() => {
+      prompt('Copy this link:', url);
+    });
+  }
+
   function openLightbox(shootId, index){
     const shoot = allShoots.find(s => s.id === shootId);
     if(!shoot) return;
     currentPhotos = shoot.photos;
     currentIndex = index;
     document.getElementById('lightboxImg').src = currentPhotos[currentIndex];
+    document.getElementById('lbCounter').textContent = (currentIndex+1) + ' / ' + currentPhotos.length;
     document.getElementById('lightbox').classList.add('active');
   }
 
@@ -240,6 +323,7 @@
   function navLightbox(dir){
     currentIndex = (currentIndex + dir + currentPhotos.length) % currentPhotos.length;
     document.getElementById('lightboxImg').src = currentPhotos[currentIndex];
+    document.getElementById('lbCounter').textContent = (currentIndex+1) + ' / ' + currentPhotos.length;
   }
 
   document.addEventListener('keydown', (e) => {
@@ -249,7 +333,18 @@
     if(e.key === 'ArrowRight') navLightbox(1);
   });
 
-  // Deep-link support: gallery.html?shoot=some-id opens straight to that shoot
+  let touchStartX = 0;
+  document.getElementById('lightbox').addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+  });
+  document.getElementById('lightbox').addEventListener('touchend', (e) => {
+    const touchEndX = e.changedTouches[0].screenX;
+    const diff = touchEndX - touchStartX;
+    if(Math.abs(diff) > 50){
+      navLightbox(diff > 0 ? -1 : 1);
+    }
+  });
+
   window.addEventListener('DOMContentLoaded', () => {
     loadShoots().then(() => {
       const params = new URLSearchParams(window.location.search);
