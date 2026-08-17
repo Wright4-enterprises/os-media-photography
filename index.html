@@ -550,9 +550,9 @@ footer{
     </div>
   </div>
   <div class="mobile-menu" id="mobileMenu">
-    <a href="#portfolio" onclick="closeMobileMenu()">Portfolio</a>
-    <a href="#services" onclick="closeMobileMenu()">Services</a>
-    <a href="#contact" onclick="closeMobileMenu()">Contact</a>
+    <a href="#portfolio" onclick="mobileNavGo(event,'portfolio')">Portfolio</a>
+    <a href="#services" onclick="mobileNavGo(event,'services')">Services</a>
+    <a href="#contact" onclick="mobileNavGo(event,'contact')">Contact</a>
     <a class="nav-cta" href="mailto:osmedia1@outlook.com?subject=Shoot Enquiry">Get in touch</a>
   </div>
 </nav>
@@ -753,7 +753,13 @@ footer{
     document.getElementById('hamburgerBtn').classList.remove('open');
     document.getElementById('mobileMenu').classList.remove('open');
   }
-
+function mobileNavGo(e, targetId){
+    e.preventDefault();
+    closeMobileMenu();
+    setTimeout(() => {
+      document.getElementById(targetId).scrollIntoView({ behavior: 'smooth' });
+    }, 320);
+  }
   (function(){
     var track = document.querySelector('.tagline-track');
     if(!track) return;
