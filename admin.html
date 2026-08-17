@@ -809,6 +809,8 @@
   });
 
   netlifyIdentity.on('login', resetInactivityTimer);
+  netlifyIdentity.on('init', user => { if (user) resetInactivityTimer(); });
+
 
 
   function updateUI(user){
