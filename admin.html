@@ -70,6 +70,17 @@
     font-family:'Oswald', sans-serif; text-transform:uppercase; color:var(--white);
     font-size:22px; margin-bottom:20px; text-align:center;
   }
+  .manage-section-head{
+    display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:20px; flex-wrap:wrap;
+  }
+  .manage-section-head h2{ margin-bottom:0; }
+  .select-mode-btn{
+    font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--chrome-dim);
+    background:none; border:1px solid var(--line); border-radius:5px; padding:7px 14px; cursor:pointer;
+    transition: border-color .2s ease, color .2s ease;
+  }
+  .select-mode-btn:hover{ border-color:var(--amber); color:var(--amber); }
+  .select-mode-btn.active{ border-color:var(--amber); color:var(--amber); background:rgba(212,165,55,0.08); }
 
   /* Grid view */
   .shoots-grid{
@@ -78,11 +89,12 @@
   }
   .shoot-tile{
     position:relative; border:1px solid var(--line); border-radius:8px; background:var(--asphalt-2);
-    overflow:hidden; cursor:pointer; transition:transform .2s ease;
+    overflow:hidden; cursor:pointer; transition:transform .2s ease, border-color .2s ease;
   }
   .shoot-tile:hover{ transform:translateY(-3px); }
   .shoot-tile.is-archived{ opacity:0.45; }
   .shoot-tile.is-archived:hover{ opacity:0.7; }
+  .shoot-tile.is-selected{ border-color:var(--amber); box-shadow: 0 0 0 1px var(--amber); }
   .shoot-tile-cover{ aspect-ratio:4/3; background:var(--asphalt-3); overflow:hidden; }
   .shoot-tile-cover img{ width:100%; height:100%; object-fit:cover; display:block; }
   .shoot-tile-meta{ padding:12px 14px 14px; }
@@ -94,6 +106,21 @@
     background:rgba(21,19,15,0.85); border:1px solid var(--line); color:var(--white);
     display:flex; align-items:center; justify-content:center; font-size:15px;
   }
+  .select-checkbox{
+    position:absolute; top:8px; left:8px; width:24px; height:24px;
+    accent-color: var(--amber); cursor:pointer; z-index:2;
+  }
+
+  /* Bulk action bar */
+  .bulk-bar{
+    display:none; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    background: var(--asphalt-2); border:1px solid var(--amber); border-radius:8px;
+    padding:14px 18px; margin-bottom:18px;
+    position: sticky; top:14px; z-index:10;
+  }
+  .bulk-bar.visible{ display:flex; }
+  .bulk-bar-count{ font-family:'JetBrains Mono', monospace; font-size:13px; color:var(--white); }
+  .bulk-bar-actions{ display:flex; gap:10px; flex-wrap:wrap; }
 
   /* Edit view */
   #editView{ display:none; }
@@ -138,6 +165,38 @@
 
   .edit-actions{ display:flex; gap:10px; margin-top:26px; flex-wrap:wrap; }
   .edit-actions .btn{ flex:1; min-width:120px; }
+
+  /* Undo toast */
+  .toast-stack{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    display:flex; flex-direction:column; gap:10px; z-index:100; width:calc(100% - 40px); max-width:420px;
+  }
+  .toast{
+    background: var(--asphalt-2); border:1px solid var(--line); border-radius:8px;
+    padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:14px;
+    box-shadow: 0 14px 30px -10px rgba(0,0,0,0.6);
+    animation: toastIn .25s cubic-bezier(.22,1,.36,1);
+  }
+  .toast.leaving{ animation: toastOut .2s ease forwards; }
+  @keyframes toastIn{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes toastOut{ from{ opacity:1; } to{ opacity:0; transform:translateY(8px); } }
+  .toast-msg{ font-size:13px; color:var(--chrome); flex:1; }
+  .toast-timer{
+    width:100%; height:3px; background:var(--asphalt-3); border-radius:2px; overflow:hidden;
+    position:absolute; left:0; bottom:0;
+  }
+  .toast{ position:relative; overflow:hidden; padding-bottom:16px; }
+  .toast-timer-fill{
+    height:100%; background:var(--amber); width:100%;
+    animation: toastShrink 5s linear forwards;
+  }
+  @keyframes toastShrink{ from{ width:100%; } to{ width:0%; } }
+  .toast-undo-btn{
+    background: var(--amber); color:var(--asphalt); border:none; border-radius:5px;
+    padding:8px 16px; font-weight:600; font-size:12.5px; cursor:pointer; white-space:nowrap;
+    font-family:'Inter', sans-serif;
+  }
+  .toast-undo-btn:hover{ background:#E3B84A; }
 </style>
 </head>
 <body>
@@ -177,7 +236,18 @@
     </div>
 
     <div class="manage-section" id="gridView">
-      <h2>Manage Shoots</h2>
+      <div class="manage-section-head">
+        <h2>Manage Shoots</h2>
+        <button class="select-mode-btn" id="selectModeBtn" onclick="toggleSelectMode()">Select</button>
+      </div>
+      <div class="bulk-bar" id="bulkBar">
+        <span class="bulk-bar-count" id="bulkBarCount">0 selected</span>
+        <div class="bulk-bar-actions">
+          <button class="btn btn-secondary btn-small" onclick="bulkArchive()">Archive selected</button>
+          <button class="btn btn-danger btn-small" onclick="bulkDelete()">Delete selected</button>
+          <button class="select-mode-btn" onclick="toggleSelectMode()">Cancel</button>
+        </div>
+      </div>
       <div id="shootsGrid" class="shoots-grid"></div>
     </div>
 
@@ -216,10 +286,15 @@
   </div>
 </div>
 
+<div class="toast-stack" id="toastStack"></div>
+
 <script>
   let allShoots = [];
   let editingShootId = null;
   let pendingDropTarget = null;
+  let selectMode = false;
+  let selectedIds = new Set();
+  let pendingDeletes = {}; // id -> { timeoutId, type: 'shoot'|'photo', shootId, photoKey }
 
   netlifyIdentity.on('init', user => {
     updateUI(user);
@@ -245,13 +320,119 @@
     renderShootsGrid();
   }
 
+  /* ---------- Toast / Undo system ---------- */
+
+  function showUndoToast(message, onUndo, onExpire, seconds = 5) {
+    const stack = document.getElementById('toastStack');
+    const toastId = 'toast-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.id = toastId;
+    toast.innerHTML = `
+      <span class="toast-msg">${message}</span>
+      <button class="toast-undo-btn">Undo</button>
+      <div class="toast-timer"><div class="toast-timer-fill" style="animation-duration:${seconds}s;"></div></div>
+    `;
+    stack.appendChild(toast);
+
+    const timeoutId = setTimeout(() => {
+      removeToast(toastId);
+      onExpire();
+    }, seconds * 1000);
+
+    toast.querySelector('.toast-undo-btn').addEventListener('click', () => {
+      clearTimeout(timeoutId);
+      removeToast(toastId);
+      onUndo();
+    });
+
+    return timeoutId;
+  }
+
+  function removeToast(toastId) {
+    const toast = document.getElementById(toastId);
+    if (!toast) return;
+    toast.classList.add('leaving');
+    setTimeout(() => toast.remove(), 200);
+  }
+
+  /* ---------- Select mode / bulk actions ---------- */
+
+  function toggleSelectMode() {
+    selectMode = !selectMode;
+    selectedIds.clear();
+    document.getElementById('selectModeBtn').classList.toggle('active', selectMode);
+    document.getElementById('selectModeBtn').textContent = selectMode ? 'Selecting...' : 'Select';
+    updateBulkBar();
+    renderShootsGrid();
+  }
+
+  function toggleSelect(id, checked) {
+    if (checked) selectedIds.add(id); else selectedIds.delete(id);
+    updateBulkBar();
+    const tile = document.querySelector(`.shoot-tile[data-id="${id}"]`);
+    if (tile) tile.classList.toggle('is-selected', checked);
+  }
+
+  function updateBulkBar() {
+    const bar = document.getElementById('bulkBar');
+    const count = document.getElementById('bulkBarCount');
+    bar.classList.toggle('visible', selectMode && selectedIds.size > 0);
+    count.textContent = selectedIds.size + ' selected';
+  }
+
+  async function bulkArchive() {
+    if (selectedIds.size === 0) return;
+    const ids = [...selectedIds];
+    const headers = await getAuthHeader();
+
+    for (const id of ids) {
+      await fetch('/.netlify/functions/shoots-update', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shootId: id, archived: true })
+      });
+    }
+
+    toggleSelectMode();
+    loadShoots();
+  }
+
+  function bulkDelete() {
+    if (selectedIds.size === 0) return;
+    const ids = [...selectedIds];
+    const count = ids.length;
+
+    // Optimistically remove from view
+    allShoots = allShoots.filter(s => !ids.includes(s.id));
+    renderShootsGrid();
+    toggleSelectMode();
+
+    showUndoToast(
+      `${count} shoot${count === 1 ? '' : 's'} deleted.`,
+      () => { loadShoots(); }, // Undo: just reload from server (nothing was sent yet)
+      async () => {
+        const headers = await getAuthHeader();
+        for (const id of ids) {
+          await fetch('/.netlify/functions/shoots-delete', {
+            method: 'POST',
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ shootId: id })
+          });
+        }
+      }
+    );
+  }
+
   function shootTileHTML(shoot) {
     const flags = [];
     if (shoot.hidden) flags.push('Hidden');
     if (shoot.archived) flags.push('Archived');
+    const isSelected = selectedIds.has(shoot.id);
     return `
-      <div class="shoot-tile ${shoot.archived ? 'is-archived' : ''}" onclick="openEditShoot('${shoot.id}')">
-        <div class="edit-icon">&#9998;</div>
+      <div class="shoot-tile ${shoot.archived ? 'is-archived' : ''} ${isSelected ? 'is-selected' : ''}" data-id="${shoot.id}" onclick="${selectMode ? `event.stopPropagation();document.getElementById('cb-${shoot.id}').click();` : `openEditShoot('${shoot.id}')`}">
+        ${selectMode ? `<input type="checkbox" class="select-checkbox" id="cb-${shoot.id}" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleSelect('${shoot.id}', this.checked)" />` : `<div class="edit-icon">&#9998;</div>`}
         <div class="shoot-tile-cover"><img src="${shoot.coverPhoto ? '/.netlify/functions/photo?key=' + encodeURIComponent(shoot.coverPhoto) : shoot.photos[0]}" alt="${shoot.title}"></div>
         <div class="shoot-tile-meta">
           <div class="shoot-tile-title">${shoot.title}</div>
@@ -429,18 +610,34 @@
     }
   }
 
-  async function deletePhotoFromEdit(key) {
-    if (!confirm('Delete this photo? This cannot be undone.')) return;
-    const headers = await getAuthHeader();
-    const res = await fetch('/.netlify/functions/shoots-update', {
-      method: 'POST',
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ shootId: editingShootId, deletePhotoKey: key })
-    });
-    const data = await res.json();
-    const shootIndex = allShoots.findIndex(s => s.id === editingShootId);
-    allShoots[shootIndex] = data.shoot;
-    renderEditPhotoList(data.shoot);
+  function deletePhotoFromEdit(key) {
+    const shoot = allShoots.find(s => s.id === editingShootId);
+    if (!shoot) return;
+
+    // Optimistically remove from the visible list
+    shoot.photoKeys = shoot.photoKeys.filter(k => k !== key);
+    renderEditPhotoList(shoot);
+
+    showUndoToast(
+      'Photo deleted.',
+      () => {
+        // Undo: put it back in view (nothing was sent to the server yet)
+        shoot.photoKeys.push(key);
+        renderEditPhotoList(shoot);
+      },
+      async () => {
+        const headers = await getAuthHeader();
+        const res = await fetch('/.netlify/functions/shoots-update', {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ shootId: editingShootId, deletePhotoKey: key })
+        });
+        const data = await res.json();
+        const shootIndex = allShoots.findIndex(s => s.id === editingShootId);
+        allShoots[shootIndex] = data.shoot;
+        if (editingShootId) renderEditPhotoList(data.shoot);
+      }
+    );
   }
 
   async function addPhotosToShoot() {
@@ -565,15 +762,28 @@
     document.getElementById('archiveBtn').textContent = shoot.archived ? 'Unarchive shoot' : 'Archive shoot';
   }
 
-  async function deleteCurrentShoot() {
-    if (!confirm('Delete this entire shoot permanently? This cannot be undone.')) return;
-    const headers = await getAuthHeader();
-    await fetch('/.netlify/functions/shoots-delete', {
-      method: 'POST',
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ shootId: editingShootId })
-    });
+  function deleteCurrentShoot() {
+    const id = editingShootId;
+    const shoot = allShoots.find(s => s.id === id);
+    if (!shoot) return;
+    const title = shoot.title;
+
     closeEditShoot();
+    allShoots = allShoots.filter(s => s.id !== id);
+    renderShootsGrid();
+
+    showUndoToast(
+      `"${title}" deleted.`,
+      () => { loadShoots(); },
+      async () => {
+        const headers = await getAuthHeader();
+        await fetch('/.netlify/functions/shoots-delete', {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ shootId: id })
+        });
+      }
+    );
   }
 
   netlifyIdentity.on('login', () => loadShoots());
