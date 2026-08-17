@@ -128,13 +128,28 @@
     margin-bottom:36px; text-transform:uppercase; letter-spacing:0.05em;
   }
 
-  .faq-item{ border-bottom:1px solid var(--line); padding:20px 0; }
-  .faq-item:first-child{ padding-top:0; }
-  .faq-q{
+  .toggle-block{ border-bottom:1px solid var(--line); padding:20px 0; cursor:pointer; }
+  .toggle-block:first-child{ padding-top:0; }
+  .toggle-head{
     font-family:'Oswald', sans-serif; font-weight:600; font-size:15.5px; color:var(--white);
-    text-transform:uppercase; letter-spacing:0.01em; margin-bottom:8px;
+    text-transform:uppercase; letter-spacing:0.01em;
+    display:flex; align-items:center; justify-content:space-between;
   }
-  .faq-a{ font-size:14.5px; color:var(--chrome-dim); }
+  .toggle-icon{ font-family:'JetBrains Mono', monospace; font-size:15px; color:var(--amber); transition: transform .25s ease; }
+  .toggle-body{
+    display:grid; grid-template-rows: 0fr; opacity:0;
+    transition: grid-template-rows .45s cubic-bezier(.22,1,.36,1), opacity .35s ease;
+  }
+  .toggle-body-inner{
+    min-height:0; overflow:hidden;
+    padding-top:12px; font-size:14.5px; color:var(--chrome-dim);
+  }
+  @media (hover:hover) and (pointer:fine){
+    .toggle-block:hover .toggle-body{ grid-template-rows: 1fr; opacity:1; }
+    .toggle-block:hover .toggle-icon{ transform:rotate(45deg); }
+  }
+  .toggle-block.is-open .toggle-body{ grid-template-rows: 1fr; opacity:1; }
+  .toggle-block.is-open .toggle-icon{ transform:rotate(45deg); }
 
   .contact-band{
     background: linear-gradient(135deg, var(--asphalt-2), var(--asphalt-3));
@@ -226,29 +241,29 @@
 </header>
 
 <section class="section wrap">
-  <div class="faq-item">
-    <div class="faq-q">How do I book a shoot?</div>
-    <div class="faq-a">Send an email through the "Get in touch" button with your car, what you're after (car meet coverage, a private shoot, or listing photos), and roughly when and where. You'll hear back to lock in a time.</div>
+  <div class="toggle-block" onclick="toggleFAQBlock(this)">
+    <div class="toggle-head">How do I book a shoot? <span class="toggle-icon">+</span></div>
+    <div class="toggle-body"><div class="toggle-body-inner">Send an email through the "Get in touch" button with your car, what you're after (car meet coverage, a private shoot, or listing photos), and roughly when and where. You'll hear back to lock in a time.</div></div>
   </div>
-  <div class="faq-item">
-    <div class="faq-q">What areas do you cover?</div>
-    <div class="faq-a">Based in Perth, WA, and covering the wider Perth metro area. Happy to travel further for the right car — just ask.</div>
+  <div class="toggle-block" onclick="toggleFAQBlock(this)">
+    <div class="toggle-head">What areas do you cover? <span class="toggle-icon">+</span></div>
+    <div class="toggle-body"><div class="toggle-body-inner">Based in Perth, WA, and covering the wider Perth metro area. Happy to travel further for the right car — just ask.</div></div>
   </div>
-  <div class="faq-item">
-    <div class="faq-q">How long until I get my photos?</div>
-    <div class="faq-a">Turnaround depends on the size of the shoot, but edited photos are typically delivered within a few days to a week.</div>
+  <div class="toggle-block" onclick="toggleFAQBlock(this)">
+    <div class="toggle-head">How long until I get my photos? <span class="toggle-icon">+</span></div>
+    <div class="toggle-body"><div class="toggle-body-inner">Turnaround depends on the size of the shoot, but edited photos are typically delivered within a few days to a week.</div></div>
   </div>
-  <div class="faq-item">
-    <div class="faq-q">Can I use the photos on social media / to sell my car?</div>
-    <div class="faq-a">Yes — delivered photos are yours to use for personal posts, listings, and sale ads. See the <a class="inline-link" href="terms.html">Terms of Service</a> for the full details on usage rights.</div>
+  <div class="toggle-block" onclick="toggleFAQBlock(this)">
+    <div class="toggle-head">Can I use the photos on social media / to sell my car? <span class="toggle-icon">+</span></div>
+    <div class="toggle-body"><div class="toggle-body-inner">Yes — delivered photos are yours to use for personal posts, listings, and sale ads. See the <a class="inline-link" href="terms.html">Terms of Service</a> for the full details on usage rights.</div></div>
   </div>
-  <div class="faq-item">
-    <div class="faq-q">Do you shoot at night or in bad weather?</div>
-    <div class="faq-a">Depends on the shoot — some content works well at night or overcast, others need clean light. This gets sorted out when booking based on what you're after.</div>
+  <div class="toggle-block" onclick="toggleFAQBlock(this)">
+    <div class="toggle-head">Do you shoot at night or in bad weather? <span class="toggle-icon">+</span></div>
+    <div class="toggle-body"><div class="toggle-body-inner">Depends on the shoot — some content works well at night or overcast, others need clean light. This gets sorted out when booking based on what you're after.</div></div>
   </div>
-  <div class="faq-item">
-    <div class="faq-q">Do you do dealership work?</div>
-    <div class="faq-a">Yes — clean, consistent content for dealership listings is one of the core services. Get in touch to talk about ongoing or one-off dealership shoots.</div>
+  <div class="toggle-block" onclick="toggleFAQBlock(this)">
+    <div class="toggle-head">Do you do dealership work? <span class="toggle-icon">+</span></div>
+    <div class="toggle-body"><div class="toggle-body-inner">Yes — clean, consistent content for dealership listings is one of the core services. Get in touch to talk about ongoing or one-off dealership shoots.</div></div>
   </div>
 </section>
 
@@ -285,6 +300,12 @@
   function toggleMobileMenu(){
     document.getElementById('hamburgerBtn').classList.toggle('open');
     document.getElementById('mobileMenu').classList.toggle('open');
+  }
+</script>
+<script>
+  function toggleFAQBlock(el){
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    el.classList.toggle('is-open');
   }
 </script>
 </body>
