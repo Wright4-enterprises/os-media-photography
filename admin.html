@@ -789,8 +789,27 @@
     );
   }
 
-  netlifyIdentity.on('login', () => loadShoots());
+   netlifyIdentity.on('login', () => loadShoots());
   netlifyIdentity.on('init', user => { if (user) loadShoots(); });
+
+  /* ---------- Auto logout after inactivity ---------- */
+  const INACTIVITY_LIMIT_MINUTES = 15;
+  let inactivityTimer = null;
+
+  function resetInactivityTimer() {
+    if (!netlifyIdentity.currentUser()) return;
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(() => {
+      netlifyIdentity.logout();
+    }, INACTIVITY_LIMIT_MINUTES * 60 * 1000);
+  }
+
+  ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(evt => {
+    document.addEventListener(evt, resetInactivityTimer);
+  });
+
+  netlifyIdentity.on('login', resetInactivityTimer);
+
 
   function updateUI(user){
     if(user){
