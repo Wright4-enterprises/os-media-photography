@@ -81,7 +81,7 @@
   .hamburger.open span:nth-child(2){ opacity:0; }
   .hamburger.open span:nth-child(3){ transform: translateY(-7px) rotate(-45deg); }
   .mobile-menu{
-    display:none; flex-direction:column;
+    display:flex; flex-direction:column;
     background: var(--asphalt-2); border-bottom:1px solid var(--line);
     max-height:0; overflow:hidden; transition: max-height .3s ease;
   }
@@ -248,7 +248,9 @@
   <p>How OS Media handles the information you share.</p>
 </header>
 
-<section class="section wrap">
+<section class="section">
+  <div class="wrap">
+
   <div class="updated-note">Last updated: August 2026</div>
 
   <div class="toggle-block" onclick="togglePrivacyBlock(this)">
@@ -297,6 +299,7 @@
       <p>Questions about this policy can be sent to <a class="inline-link" href="mailto:osmedia1@outlook.com">osmedia1@outlook.com</a>.</p>
     </div></div>
   </div>
+     </div>
 </section>
 
 <footer>
