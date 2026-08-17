@@ -109,12 +109,17 @@
 
 
   /* REV STRIP - signature divider */
-  .rev-strip{
+    .rev-strip{
     height: 3px;
     width: 100%;
-    background: repeating-linear-gradient(90deg, var(--amber) 0px, var(--amber) 140px, var(--crimson) 140px, var(--crimson) 180px);
-    background-size: 200px 100%;
+    background: repeating-linear-gradient(90deg,
+      var(--amber) 0px, var(--amber) 500px,
+      var(--crimson) 650px, var(--crimson) 750px,
+      var(--amber) 900px, var(--amber) 1400px
+    );
+    background-size: 1400px 100%;
   }
+
 #portfolio, #services, #contact{ scroll-margin-top: 100px; }
   /* TAGLINE STRIP */
   .tagline-strip{
