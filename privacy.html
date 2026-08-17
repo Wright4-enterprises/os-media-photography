@@ -121,8 +121,31 @@
   .section li{ margin-bottom:8px; }
   .section a.inline-link{ color:var(--amber); text-decoration:underline; }
 
-  .legal-block{ margin-bottom:36px; }
-  .legal-block:last-child{ margin-bottom:0; }
+  .toggle-block{ border-bottom:1px solid var(--line); padding:20px 0; cursor:pointer; }
+  .toggle-block:first-child{ padding-top:0; }
+  .toggle-head{
+    font-family:'Oswald', sans-serif; font-weight:600; font-size:15.5px; color:var(--white);
+    text-transform:uppercase; letter-spacing:0.01em;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .toggle-icon{ font-family:'JetBrains Mono', monospace; font-size:15px; color:var(--amber); transition: transform .25s ease; }
+  .toggle-body{
+    display:grid; grid-template-rows: 0fr; opacity:0;
+    transition: grid-template-rows .45s cubic-bezier(.22,1,.36,1), opacity .35s ease;
+  }
+  .toggle-body-inner{
+    min-height:0; overflow:hidden;
+    padding-top:12px; font-size:14.5px; color:var(--chrome-dim);
+  }
+  .toggle-body-inner p{ margin-bottom:0; }
+  .toggle-body-inner p + p{ margin-top:10px; }
+  .toggle-body-inner ul{ margin:0 0 10px 20px; }
+  @media (hover:hover) and (pointer:fine){
+    .toggle-block:hover .toggle-body{ grid-template-rows: 1fr; opacity:1; }
+    .toggle-block:hover .toggle-icon{ transform:rotate(45deg); }
+  }
+  .toggle-block.is-open .toggle-body{ grid-template-rows: 1fr; opacity:1; }
+  .toggle-block.is-open .toggle-icon{ transform:rotate(45deg); }
   .updated-note{
     font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--chrome-dim);
     margin-bottom:36px; text-transform:uppercase; letter-spacing:0.05em;
@@ -228,39 +251,51 @@
 <section class="section wrap">
   <div class="updated-note">Last updated: August 2026</div>
 
-  <div class="legal-block">
-    <h2>1. Information we collect</h2>
-    <p>When you get in touch about a shoot, we may collect information you provide directly, such as your name, email address, phone number, and details about your car or the shoot you're enquiring about. If you book through our booking page, we also collect the date, time, and details you submit through that form.</p>
+  <div class="toggle-block" onclick="togglePrivacyBlock(this)">
+    <div class="toggle-head">1. Information we collect <span class="toggle-icon">+</span></div>
+    <div class="toggle-body"><div class="toggle-body-inner">
+      <p>When you get in touch about a shoot, we may collect information you provide directly, such as your name, email address, phone number, and details about your car or the shoot you're enquiring about. If you book through our booking page, we also collect the date, time, and details you submit through that form.</p>
+    </div></div>
   </div>
 
-  <div class="legal-block">
-    <h2>2. How we use your information</h2>
-    <ul>
-      <li>To respond to enquiries and arrange shoots</li>
-      <li>To communicate with you about bookings, changes, or delivery of photos</li>
-      <li>To deliver edited photos to you after a shoot</li>
-    </ul>
-    <p>We don't sell or rent your personal information to third parties.</p>
+  <div class="toggle-block" onclick="togglePrivacyBlock(this)">
+    <div class="toggle-head">2. How we use your information <span class="toggle-icon">+</span></div>
+    <div class="toggle-body"><div class="toggle-body-inner">
+      <ul>
+        <li>To respond to enquiries and arrange shoots</li>
+        <li>To communicate with you about bookings, changes, or delivery of photos</li>
+        <li>To deliver edited photos to you after a shoot</li>
+      </ul>
+      <p>We don't sell or rent your personal information to third parties.</p>
+    </div></div>
   </div>
 
-  <div class="legal-block">
-    <h2>3. Photos and content</h2>
-    <p>Photos taken during a shoot may be used for OS Media's own portfolio, website, and social media unless you specifically request otherwise when booking. If you'd like your shoot kept private, let us know before or during booking.</p>
+  <div class="toggle-block" onclick="togglePrivacyBlock(this)">
+    <div class="toggle-head">3. Photos and content <span class="toggle-icon">+</span></div>
+    <div class="toggle-body"><div class="toggle-body-inner">
+      <p>Photos taken during a shoot may be used for OS Media's own portfolio, website, and social media unless you specifically request otherwise when booking. If you'd like your shoot kept private, let us know before or during booking.</p>
+    </div></div>
   </div>
 
-  <div class="legal-block">
-    <h2>4. Data storage</h2>
-    <p>Enquiry and booking details are stored securely and only used for the purposes described above. Photos are stored using third-party hosting and storage providers as part of running this website.</p>
+  <div class="toggle-block" onclick="togglePrivacyBlock(this)">
+    <div class="toggle-head">4. Data storage <span class="toggle-icon">+</span></div>
+    <div class="toggle-body"><div class="toggle-body-inner">
+      <p>Enquiry and booking details are stored securely and only used for the purposes described above. Photos are stored using third-party hosting and storage providers as part of running this website.</p>
+    </div></div>
   </div>
 
-  <div class="legal-block">
-    <h2>5. Your rights</h2>
-    <p>You can ask to see what information we hold about you, or request that it be corrected or deleted, by contacting us directly.</p>
+  <div class="toggle-block" onclick="togglePrivacyBlock(this)">
+    <div class="toggle-head">5. Your rights <span class="toggle-icon">+</span></div>
+    <div class="toggle-body"><div class="toggle-body-inner">
+      <p>You can ask to see what information we hold about you, or request that it be corrected or deleted, by contacting us directly.</p>
+    </div></div>
   </div>
 
-  <div class="legal-block">
-    <h2>6. Contact</h2>
-    <p>Questions about this policy can be sent to <a class="inline-link" href="mailto:osmedia1@outlook.com">osmedia1@outlook.com</a>.</p>
+  <div class="toggle-block" onclick="togglePrivacyBlock(this)">
+    <div class="toggle-head">6. Contact <span class="toggle-icon">+</span></div>
+    <div class="toggle-body"><div class="toggle-body-inner">
+      <p>Questions about this policy can be sent to <a class="inline-link" href="mailto:osmedia1@outlook.com">osmedia1@outlook.com</a>.</p>
+    </div></div>
   </div>
 </section>
 
@@ -297,6 +332,12 @@
   function toggleMobileMenu(){
     document.getElementById('hamburgerBtn').classList.toggle('open');
     document.getElementById('mobileMenu').classList.toggle('open');
+  }
+</script>
+<script>
+  function togglePrivacyBlock(el){
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    el.classList.toggle('is-open');
   }
 </script>
 </body>
