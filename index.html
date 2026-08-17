@@ -745,17 +745,26 @@ footer{
     window.scrollTo(0,0);
   }
 
+   let mobileMenuJustOpened = false;
   function toggleMobileMenu(){
+    const isOpening = !document.getElementById('mobileMenu').classList.contains('open');
     document.getElementById('hamburgerBtn').classList.toggle('open');
     document.getElementById('mobileMenu').classList.toggle('open');
+    if (isOpening) {
+      mobileMenuJustOpened = true;
+      setTimeout(() => { mobileMenuJustOpened = false; }, 400);
+    }
   }
   function closeMobileMenu(){
     document.getElementById('hamburgerBtn').classList.remove('open');
     document.getElementById('mobileMenu').classList.remove('open');
   }
-  window.addEventListener('scroll', () => {
+window.addEventListener('scroll', () => {
+    if (mobileMenuJustOpened) return;
     if (document.getElementById('mobileMenu').classList.contains('open')) {
       closeMobileMenu();
+    }
+  }, { passive: true });
     }
   }, { passive: true });
 function mobileNavGo(e, targetId){
