@@ -81,7 +81,7 @@
   .hamburger.open span:nth-child(2){ opacity:0; }
   .hamburger.open span:nth-child(3){ transform: translateY(-7px) rotate(-45deg); }
   .mobile-menu{
-    display:none; flex-direction:column;
+    display:flex; flex-direction:column;
     background: var(--asphalt-2); border-bottom:1px solid var(--line);
     max-height:0; overflow:hidden; transition: max-height .3s ease;
   }
@@ -225,7 +225,8 @@
   <p>Got a car worth shooting, a dealership enquiry, or just a question? Reach out below.</p>
 </header>
 
-<section class="section wrap" style="padding-bottom:64px;">
+<section class="section" style="padding-bottom:64px;">
+  <div class="wrap">
   <div class="contact-band">
     <h2>Let's talk cars</h2>
     <p>Based in Perth — happy to travel for the right build.</p>
@@ -234,6 +235,7 @@
       <a class="btn-secondary" href="https://instagram.com/0s.media" target="_blank" rel="noopener">Instagram</a>
     </div>
   </div>
+     </div>
 </section>
 
 <footer>
