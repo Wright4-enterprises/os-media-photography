@@ -718,12 +718,33 @@
     document.getElementById('mobileMenu').classList.remove('open');
   }
 
+  <script>
   (function(){
     var track = document.querySelector('.tagline-track');
-    if(track){
-      track.innerHTML = track.innerHTML + track.innerHTML;
+    if(!track) return;
+
+    track.innerHTML = track.innerHTML + track.innerHTML;
+
+    var pos = 0;
+    var speed = 0.4;
+    var halfWidth = track.scrollWidth / 2;
+
+    function tick(){
+      pos -= speed;
+      if(Math.abs(pos) >= halfWidth){
+        pos = 0;
+      }
+      track.style.transform = 'translateX(' + pos + 'px)';
+      requestAnimationFrame(tick);
     }
+
+    window.addEventListener('load', function(){
+      halfWidth = track.scrollWidth / 2;
+      requestAnimationFrame(tick);
+    });
   })();
+</script>
+
 
   (function(){
     var targets = document.querySelectorAll('[data-reveal], [data-reveal-group]');
