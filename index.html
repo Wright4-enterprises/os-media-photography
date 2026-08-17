@@ -125,12 +125,8 @@
   display:flex; gap:40px; white-space:nowrap; width:max-content;
   font-family:'JetBrains Mono', monospace; font-size:12px; letter-spacing:0.1em;
   text-transform:uppercase; color:var(--chrome-dim);
-  animation: taglineScroll 22s linear infinite;
 }
-@keyframes taglineScroll{
-  from{ transform: translateX(0); }
-  to{ transform: translateX(-50%); }
-}
+
 
   .tagline-track span{ display:flex; align-items:center; gap:40px; }
   .tagline-track span::after{ content:'•'; color:var(--amber); margin-left:40px; }
