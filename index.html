@@ -112,7 +112,8 @@
   .rev-strip{
     height: 3px;
     width: 100%;
-    background: linear-gradient(90deg, var(--amber) 0%, var(--amber) 60%, var(--crimson) 85%, var(--crimson) 100%);
+    background: repeating-linear-gradient(90deg, var(--amber) 0px, var(--amber) 140px, var(--crimson) 140px, var(--crimson) 180px);
+    background-size: 200px 100%;
   }
 #portfolio, #services, #contact{ scroll-margin-top: 100px; }
   /* TAGLINE STRIP */
@@ -773,8 +774,9 @@ function mobileNavGo(e, targetId){
       document.getElementById(targetId).scrollIntoView({ behavior: 'smooth' });
     }, 320);
   }
-  (function(){
+(function(){
     var track = document.querySelector('.tagline-track');
+    var strip = document.querySelector('.rev-strip');
     if(!track) return;
 
     track.innerHTML = track.innerHTML + track.innerHTML;
@@ -789,6 +791,9 @@ function mobileNavGo(e, targetId){
         pos = 0;
       }
       track.style.transform = 'translateX(' + pos + 'px)';
+      if(strip){
+        strip.style.backgroundPosition = pos + 'px 0';
+      }
       requestAnimationFrame(tick);
     }
 
