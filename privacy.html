@@ -357,8 +357,11 @@
 <script>
   function togglePrivacyBlock(el){
     if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
-    el.classList.toggle('is-open');
+    const isOpen = el.classList.contains('is-open');
+    document.querySelectorAll('.toggle-block.is-open').forEach(block => block.classList.remove('is-open'));
+    if (!isOpen) el.classList.add('is-open');
   }
+
 </script>
 </body>
 </html>
