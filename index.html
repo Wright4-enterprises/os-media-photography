@@ -753,6 +753,11 @@ footer{
     document.getElementById('hamburgerBtn').classList.remove('open');
     document.getElementById('mobileMenu').classList.remove('open');
   }
+  window.addEventListener('scroll', () => {
+    if (document.getElementById('mobileMenu').classList.contains('open')) {
+      closeMobileMenu();
+    }
+  }, { passive: true });
 function mobileNavGo(e, targetId){
     e.preventDefault();
     closeMobileMenu();
