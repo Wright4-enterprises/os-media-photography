@@ -246,7 +246,16 @@
   .gallery{
     display:grid; gap:14px;
     grid-template-columns: repeat(2, 1fr);
+  }  .frame.skeleton{
+    background: linear-gradient(100deg, var(--asphalt-2) 30%, #332D22 50%, var(--asphalt-2) 70%);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
   }
+  @keyframes shimmer{
+    0%{ background-position: 200% 0; }
+    100%{ background-position: -200% 0; }
+  }
+
   @media(min-width:700px){.gallery{grid-template-columns: repeat(3, 1fr);}}
   .frame{
     aspect-ratio: 4/5;
@@ -623,9 +632,12 @@ footer{
       <h2>Recent work</h2>
     </div>
     <!-- Swap any image below by replacing the file in os-media-photos/ and updating the src -->
-    <div class="gallery" data-reveal-group id="recentWorkGallery">
-  <div class="frame"><p style="color:var(--chrome-dim);">Loading...</p></div>
+<div class="gallery" data-reveal-group id="recentWorkGallery">
+  <div class="frame skeleton"></div>
+  <div class="frame skeleton"></div>
+  <div class="frame skeleton"></div>
 </div>
+
 
   </div>
 </section>
