@@ -315,5 +315,12 @@
     document.getElementById('mobileMenu').classList.toggle('open');
   }
 </script>
+<script>
+  function toggleTermsBlock(el){
+    // On desktop (mouse), hover already handles it — clicking shouldn't fight that
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    el.classList.toggle('is-open');
+  }
+</script>
 </body>
 </html>
