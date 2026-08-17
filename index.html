@@ -77,12 +77,57 @@
   }
   .nav-cta:hover{ background: #E3B84A; }
 
+  /* Mobile hamburger */
+  .nav-right{ display:flex; align-items:center; gap:14px; }
+  .hamburger{
+    display:flex; flex-direction:column; justify-content:center; gap:5px;
+    width:32px; height:32px; background:none; border:none; cursor:pointer; padding:0;
+  }
+  @media(min-width:700px){ .hamburger{ display:none; } }
+  .hamburger span{
+    display:block; width:100%; height:2px; background:var(--white);
+    transition: transform .25s ease, opacity .25s ease;
+  }
+  .hamburger.open span:nth-child(1){ transform: translateY(7px) rotate(45deg); }
+  .hamburger.open span:nth-child(2){ opacity:0; }
+  .hamburger.open span:nth-child(3){ transform: translateY(-7px) rotate(-45deg); }
+
+  .mobile-menu{
+    display:none; flex-direction:column;
+    background: var(--asphalt-2); border-bottom:1px solid var(--line);
+    max-height:0; overflow:hidden; transition: max-height .3s ease;
+  }
+  .mobile-menu.open{ max-height:300px; }
+  @media(min-width:700px){ .mobile-menu{ display:none !important; } }
+  .mobile-menu a{
+    display:block; padding:16px 28px; color:var(--chrome-dim);
+    text-decoration:none; font-size:14px; text-transform:uppercase; letter-spacing:0.04em;
+    border-top:1px solid var(--line);
+  }
+  .mobile-menu a:hover{ color:var(--white); }
+  .mobile-menu .nav-cta{ margin:14px 28px 18px; text-align:center; }
+
   /* REV STRIP - signature divider */
   .rev-strip{
     height: 3px;
     width: 100%;
     background: linear-gradient(90deg, var(--amber) 0%, var(--amber) 60%, var(--crimson) 85%, var(--crimson) 100%);
   }
+
+  /* TAGLINE STRIP */
+  .tagline-strip{
+    background: var(--asphalt-2);
+    border-bottom: 1px solid var(--line);
+    overflow:hidden;
+    padding: 11px 0;
+  }
+  .tagline-track{
+    display:flex; gap:40px; white-space:nowrap;
+    font-family:'JetBrains Mono', monospace; font-size:12px; letter-spacing:0.1em;
+    text-transform:uppercase; color:var(--chrome-dim);
+  }
+  .tagline-track span{ display:flex; align-items:center; gap:40px; }
+  .tagline-track span::after{ content:'•'; color:var(--amber); margin-left:40px; }
 
   /* HERO */
   .hero{
@@ -229,6 +274,34 @@
     font-size:17px; color:var(--white); margin-bottom:8px; letter-spacing:0.01em;
   }
   .service p{font-size:14px; color: var(--chrome-dim);}
+
+  /* INSTAGRAM */
+  .instagram-band{
+    background: linear-gradient(135deg, var(--asphalt-2), var(--asphalt-3));
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 40px 32px;
+    text-align:center;
+  }
+  .instagram-band h2{ margin-bottom:10px; }
+  .instagram-band p{ font-size:14.5px; color:var(--chrome-dim); margin-bottom:24px; }
+  .instagram-embed-slot{
+    background: var(--asphalt-3); border:1px dashed var(--line); border-radius:8px;
+    padding:32px 20px; margin-bottom:20px; font-size:13px; color:var(--chrome-dim);
+    font-family:'JetBrains Mono', monospace; line-height:1.7;
+  }
+  .instagram-embed-slot code{
+    background: var(--asphalt); padding:2px 6px; border-radius:3px; color:var(--amber);
+  }
+  .instagram-follow-btn{
+    display:inline-flex; align-items:center; gap:8px;
+    background: var(--amber); color:var(--asphalt);
+    padding:12px 26px; border-radius:3px;
+    text-decoration:none; font-weight:600; font-size:14px;
+    text-transform:uppercase; letter-spacing:0.03em;
+    transition: background .25s ease;
+  }
+  .instagram-follow-btn:hover{ background:#E3B84A; }
 
   /* CONTACT */
   .contact-band{
@@ -454,13 +527,31 @@
       <li><a href="#services">Services</a></li>
       <li><a href="#contact">Contact</a></li>
     </ul>
-<a class="nav-cta" href="mailto:osmedia1@outlook.com?subject=Shoot Enquiry">Get in touch</a>
-
-
-
+    <div class="nav-right">
+      <a class="nav-cta" href="mailto:osmedia1@outlook.com?subject=Shoot Enquiry">Get in touch</a>
+      <button class="hamburger" id="hamburgerBtn" onclick="toggleMobileMenu()" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#portfolio" onclick="closeMobileMenu()">Portfolio</a>
+    <a href="#services" onclick="closeMobileMenu()">Services</a>
+    <a href="#contact" onclick="closeMobileMenu()">Contact</a>
+    <a class="nav-cta" href="mailto:osmedia1@outlook.com?subject=Shoot Enquiry">Get in touch</a>
   </div>
 </nav>
 <div class="rev-strip"></div>
+
+<div class="tagline-strip">
+  <div class="wrap">
+    <div class="tagline-track">
+      <span>Perth-based automotive photography</span>
+      <span>Every car deserves its close-up</span>
+      <span>Meets · Private shoots · Dealership work</span>
+    </div>
+  </div>
+</div>
 
 <header class="hero">
   <div class="wrap hero-inner">
@@ -468,10 +559,7 @@
     <h1>Cars shot<br>like they <span>deserve.</span></h1>
     <p class="hero-sub">OS Media — automotive photography by Owen Smith. Car meets, private shoots and content built for people who actually care about their build.</p>
     <div class="hero-ctas">
-   <a class="nav-cta" style="padding:12.5px 26px; font-size:14px;" href="mailto:osmedia1@outlook.com?subject=Shoot Enquiry">Get in touch</a>
-
-
-
+      <a class="nav-cta" style="padding:12.5px 26px; font-size:14px;" href="mailto:osmedia1@outlook.com?subject=Shoot Enquiry">Get in touch</a>
       <a class="btn-secondary" href="gallery.html">View the work</a>
     </div>
   </div>
@@ -526,6 +614,32 @@
         <h3>Content for Sellers</h3>
         <p>Clean, high-quality shots for private sale or dealership listings that actually get attention.</p>
       </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0;">
+  <div class="wrap">
+    <div class="instagram-band" data-reveal>
+      <h2>On Instagram</h2>
+      <p>Behind-the-scenes shots, latest edits, and the odd meet recap.</p>
+
+      <!--
+        OWEN: To show a live feed of your Instagram posts here, sign up free at
+        snapwidget.com (or lightwidget.com), connect your @0s.media account,
+        and they'll give you a small <iframe> embed code. Paste that code
+        in place of the div below (id="instagramEmbedSlot") and delete this comment block.
+      -->
+      <div class="instagram-embed-slot" id="instagramEmbedSlot">
+        Live Instagram feed goes here.<br><br>
+        To set this up: sign up free at <code>snapwidget.com</code>, connect
+        the <code>@0s.media</code> account, and paste the embed code they give you
+        in place of this box.
+      </div>
+
+      <a class="instagram-follow-btn" href="https://instagram.com/0s.media" target="_blank" rel="noopener">
+        &#128247; Follow @0s.media
+      </a>
     </div>
   </div>
 </section>
@@ -615,6 +729,21 @@
     window.scrollTo(0,0);
   }
 
+  function toggleMobileMenu(){
+    document.getElementById('hamburgerBtn').classList.toggle('open');
+    document.getElementById('mobileMenu').classList.toggle('open');
+  }
+  function closeMobileMenu(){
+    document.getElementById('hamburgerBtn').classList.remove('open');
+    document.getElementById('mobileMenu').classList.remove('open');
+  }
+
+  (function(){
+    var track = document.querySelector('.tagline-track');
+    if(track){
+      track.innerHTML = track.innerHTML + track.innerHTML;
+    }
+  })();
 
   (function(){
     var targets = document.querySelectorAll('[data-reveal], [data-reveal-group]');
