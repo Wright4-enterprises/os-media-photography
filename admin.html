@@ -793,7 +793,7 @@
   netlifyIdentity.on('init', user => { if (user) loadShoots(); });
 
   /* ---------- Auto logout after inactivity ---------- */
-  const INACTIVITY_LIMIT_MINUTES = 15;
+  const INACTIVITY_LIMIT_MINUTES = 1;
   let inactivityTimer = null;
 
   function resetInactivityTimer() {
