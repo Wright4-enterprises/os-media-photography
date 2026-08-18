@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Page Not Found — OS Media</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="mask-icon" href="safari-pinned-tab.svg" color="#D4A537">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+
+<meta name="robots" content="noindex">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --asphalt: #15130F;
+    --asphalt-2: #1E1B15;
+    --asphalt-3: #26221A;
+    --chrome: #D8DADE;
+    --chrome-dim: #8A8D93;
+    --amber: #D4A537;
+    --amber-deep: #A8790E;
+    --crimson: #C43B3B;
+    --white: #F7F5F0;
+    --line: #35312688;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background: var(--asphalt);
+    color: var(--chrome);
+    font-family:'Inter', sans-serif;
+    line-height:1.6;
+    -webkit-font-smoothing: antialiased;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+  a{color:inherit;}
+  .wrap{max-width: 1080px; margin:0 auto; padding: 0 28px;}
+
+  nav{
+    position: sticky; top:0; z-index:50;
+    background: rgba(21,19,15,0.85);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  nav .wrap{display:flex; align-items:center; justify-content:space-between; padding:18px 28px;}
+  .brand{
+    font-family:'Oswald', sans-serif; font-weight:700; font-size: 19px;
+    letter-spacing: 0.04em; text-transform: uppercase; color: var(--white);
+    display: flex; align-items: center; gap: 9px; text-decoration:none;
+  }
+  .brand span{color: var(--amber);}
+  .nav-cta{
+    background: var(--amber); color:var(--asphalt);
+    padding:9px 18px; border-radius:3px; font-size:13px; font-weight:600; text-decoration:none;
+    text-transform:uppercase; letter-spacing:0.03em; white-space:nowrap; transition: background .25s ease;
+  }
+  .nav-cta:hover{ background: #E3B84A; }
+
+  .rev-strip{
+    height: 3px; width: 100%;
+    background: linear-gradient(90deg, var(--amber) 0%, var(--amber) 60%, var(--crimson) 85%, var(--crimson) 100%);
+  }
+
+  main{
+    flex:1;
+    display:flex; align-items:center; justify-content:center;
+    padding: 60px 28px;
+  }
+  .error-content{ text-align:center; max-width: 520px; }
+  .error-code{
+    font-family:'Oswald', sans-serif; font-weight:700; font-size: clamp(90px, 20vw, 160px);
+    line-height:0.9; color: var(--white); letter-spacing:0.01em; margin-bottom: 8px;
+    position:relative;
+  }
+  .error-code span{ color: var(--amber); }
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace; font-size:12px; letter-spacing:0.16em;
+    text-transform:uppercase; color: var(--amber); margin-bottom:14px;
+  }
+  .error-title{
+    font-family:'Oswald', sans-serif; font-weight:600; text-transform:uppercase;
+    font-size: clamp(20px, 3.4vw, 28px); color: var(--white); margin-bottom:14px; letter-spacing:0.01em;
+  }
+  .error-sub{ font-size:15px; color: var(--chrome-dim); margin-bottom:36px; }
+  .error-ctas{display:flex; gap:14px; justify-content:center; flex-wrap:wrap;}
+  .btn-primary{
+    background: var(--amber); color:var(--asphalt); padding:14px 28px; border-radius:3px;
+    text-decoration:none; font-weight:600; font-size:14px; text-transform:uppercase; letter-spacing:0.03em;
+    display: inline-block; transition: background .25s ease, transform .25s cubic-bezier(.22,1,.36,1);
+  }
+  .btn-primary:hover{ background: #E3B84A; transform: translateY(-2px); }
+  .btn-secondary{
+    border:1.5px solid var(--chrome-dim); color:var(--white); padding:12.5px 26px; border-radius:3px;
+    text-decoration:none; font-weight:600; font-size:14px; text-transform:uppercase; letter-spacing:0.03em;
+    display: inline-block; transition: border-color .25s ease, transform .25s cubic-bezier(.22,1,.36,1);
+  }
+  .btn-secondary:hover{ border-color: var(--amber); transform: translateY(-2px); }
+
+  footer{
+    border-top:1px solid var(--line);
+    padding: 24px 0;
+    font-size:12px; color: var(--chrome-dim);
+    text-align:center;
+    text-transform:uppercase; letter-spacing:0.04em;
+  }
+
+  .uturn-icon{ margin: 0 auto 20px; display:block; }
+
+  ::selection{background: var(--amber); color: var(--asphalt);}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="index.html">
+      <svg width="24" height="18" viewBox="0 0 32 24" fill="none">
+        <path d="M2 20 L14 4" stroke="#D4A537" stroke-width="2" stroke-linecap="round"/>
+        <path d="M10 20 L22 4" stroke="#D4A537" stroke-width="2" stroke-linecap="round" opacity="0.65"/>
+        <path d="M18 20 L30 4" stroke="#D4A537" stroke-width="2" stroke-linecap="round" opacity="0.35"/>
+      </svg>
+      OS <span>MEDIA</span>
+    </a>
+    <a class="nav-cta" href="mailto:osmedia1@outlook.com?subject=Shoot Enquiry">Get in touch</a>
+  </div>
+</nav>
+<div class="rev-strip"></div>
+
+<main>
+  <div class="error-content">
+    <svg class="uturn-icon" width="64" height="64" viewBox="0 0 64 64" fill="none">
+      <circle cx="32" cy="32" r="30" stroke="#D4A537" stroke-width="2.5"/>
+      <path d="M22 40 V26 A10 10 0 0 1 42 26 V34" stroke="#D4A537" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+      <path d="M35 29 L42 34 L47 27" stroke="#D4A537" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+    <div class="eyebrow">Recalculating...</div>
+    <div class="error-code">4<span>0</span>4</div>
+    <div class="error-title">Take the next U-turn</div>
+    <p class="error-sub">This page doesn't exist, isn't parked here, and definitely isn't street legal. Someone's GPS (probably yours) sent you the wrong way — let's get you back on the road.</p>
+    <div class="error-ctas">
+      <a class="btn-primary" href="index.html">Back to home</a>
+      <a class="btn-secondary" href="gallery.html">View the gallery</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">OS Media — Owen Smith · Perth, WA</div>
+</footer>
+
+</body>
+</html>
