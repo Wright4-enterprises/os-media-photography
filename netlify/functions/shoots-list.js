@@ -1,7 +1,7 @@
 import { getStore } from '@netlify/blobs';
 
 export default async (req, context) => {
-  const shootsStore = getStore('shoots');
+const shootsStore = getStore('shoots', { consistency: 'strong' });
 
   const manifestRaw = await shootsStore.get('manifest.json');
   const manifest = manifestRaw ? JSON.parse(manifestRaw) : [];
