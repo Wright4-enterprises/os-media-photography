@@ -389,17 +389,23 @@
     if (selectedIds.size === 0) return;
     const ids = [...selectedIds];
     const headers = await getAuthHeader();
+    const failed = [];
 
     for (const id of ids) {
-      await fetch('/.netlify/functions/shoots-update', {
+      const res = await fetch('/.netlify/functions/shoots-update', {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify({ shootId: id, archived: true })
       });
+      if (!res.ok) failed.push(id);
     }
 
     toggleSelectMode();
     loadShoots();
+
+    if (failed.length) {
+      alert(`${failed.length} of ${ids.length} shoot(s) failed to archive and were NOT saved. Try again — if it keeps happening, you may have been logged out.`);
+    }
   }
 
   function bulkDelete() {
@@ -735,11 +741,17 @@
     const newHidden = !shoot.hidden;
 
     const headers = await getAuthHeader();
-    await fetch('/.netlify/functions/shoots-update', {
+    const res = await fetch('/.netlify/functions/shoots-update', {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ shootId: editingShootId, hidden: newHidden })
     });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      alert('Could not save — the change was NOT saved to the server.\n\n' + (errText || ('Server returned ' + res.status)));
+      return;
+    }
 
     shoot.hidden = newHidden;
     updateHideArchiveButtons(shoot);
@@ -750,11 +762,17 @@
     const newArchived = !shoot.archived;
 
     const headers = await getAuthHeader();
-    await fetch('/.netlify/functions/shoots-update', {
+    const res = await fetch('/.netlify/functions/shoots-update', {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ shootId: editingShootId, archived: newArchived })
     });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      alert('Could not save — the change was NOT saved to the server.\n\n' + (errText || ('Server returned ' + res.status)));
+      return;
+    }
 
     shoot.archived = newArchived;
     updateHideArchiveButtons(shoot);
