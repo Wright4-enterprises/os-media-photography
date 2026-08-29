@@ -129,13 +129,47 @@
   .card{ border:1px solid var(--line); border-radius:10px; background:var(--asphalt-2); padding:28px; margin-bottom:20px; max-width:560px; margin-left:auto; margin-right:auto; }
   .user-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; font-size:13px; color:var(--chrome-dim); max-width:560px; margin-left:auto; margin-right:auto; }
   .user-row button{ background:none; border:none; color:var(--crimson); font-family:'Inter', sans-serif; cursor:pointer; font-size:13px; }
+  .user-row-actions{ display:flex; align-items:center; gap:16px; }
+  .user-row-actions .profile-btn{ color:var(--amber); }
+  .user-row-actions .profile-btn:hover{ color:#E3B84A; }
+  #profileGreeting{ color:var(--white); font-weight:600; }
 
   label{ display:block; font-size:13px; font-weight:600; color:var(--white); margin-bottom:6px; margin-top:18px; }
   label:first-child{ margin-top:0; }
-  input[type=text], input[type=date]{
+  input[type=text], input[type=date], input[type=email], input[type=password], select{
     width:100%; background:var(--asphalt-3); border:1px solid var(--line); border-radius:5px;
     padding:11px 12px; color:var(--white); font-family:'Inter', sans-serif; font-size:14px;
   }
+  input[type=text]:focus, input[type=date]:focus, input[type=email]:focus, input[type=password]:focus, select:focus{
+    outline:none; border-color:var(--amber);
+  }
+  .field-hint{ font-size:11.5px; color:var(--chrome-dim); margin-top:6px; }
+
+  /* Profile modal */
+  .profile-overlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6);
+    align-items:center; justify-content:center; z-index:200; padding:20px;
+  }
+  .profile-overlay.active{ display:flex; }
+  .profile-box{
+    background:var(--asphalt-2); border:1px solid var(--line); border-radius:10px;
+    padding:28px; width:100%; max-width:440px; max-height:90vh; overflow-y:auto;
+    animation: toastIn .2s cubic-bezier(.22,1,.36,1); position:relative;
+  }
+  .profile-box h2{
+    font-family:'Oswald', sans-serif; text-transform:uppercase; color:var(--white);
+    font-size:18px; margin:0 0 20px; padding-right:30px; border-bottom:1px solid var(--line); padding-bottom:16px;
+  }
+  .profile-close-btn{
+    position:absolute; top:22px; right:22px; background:none; border:none;
+    color:var(--chrome-dim); font-size:20px; line-height:1; cursor:pointer;
+  }
+  .profile-close-btn:hover{ color:var(--amber); }
+  .profile-section-label{
+    font-family:'JetBrains Mono', monospace; font-size:11px; text-transform:uppercase;
+    color:var(--chrome-dim); letter-spacing:.05em; margin-top:26px; margin-bottom:2px;
+  }
+  .profile-section-label:first-of-type{ margin-top:0; }
   input[type=file]{
     width:100%; background:var(--asphalt-3); border:1px dashed var(--line); border-radius:5px;
     padding:20px 12px; color:var(--chrome-dim); font-family:'Inter', sans-serif; font-size:13px;
@@ -307,8 +341,11 @@
 
   <div id="appState">
     <div class="user-row">
-      <span id="userEmail"></span>
-      <button onclick="netlifyIdentity.logout()">Log out</button>
+      <span id="profileGreeting"></span>
+      <div class="user-row-actions">
+        <button class="profile-btn" onclick="openProfile()">Profile</button>
+        <button onclick="netlifyIdentity.logout()">Log out</button>
+      </div>
     </div>
 
     <div class="card">
@@ -377,6 +414,35 @@
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="profile-overlay" id="profileOverlay">
+  <div class="profile-box">
+    <button class="profile-close-btn" aria-label="Close" onclick="closeProfile()">&times;</button>
+    <h2>Your profile</h2>
+
+    <div class="profile-section-label">Display name</div>
+    <input type="text" id="profileName" placeholder="e.g. Owen Smith">
+
+    <div class="profile-section-label">Timezone</div>
+    <select id="profileTimezone"></select>
+
+    <div class="profile-section-label">Login email</div>
+    <input type="email" id="profileEmail">
+    <div class="field-hint">Changing this sends a confirmation link to the new address - the change won't take effect until you click it.</div>
+
+    <div class="profile-section-label">Change password</div>
+    <input type="password" id="profileNewPassword" placeholder="New password" autocomplete="new-password">
+    <input type="password" id="profileConfirmPassword" placeholder="Confirm new password" autocomplete="new-password" style="margin-top:10px;">
+    <div class="field-hint">Leave both blank to keep your current password.</div>
+
+    <div class="edit-actions">
+      <button class="btn" id="profileSaveBtn" onclick="saveProfile()">Save changes</button>
+      <button class="btn btn-secondary" onclick="closeProfile()">Cancel</button>
+    </div>
+
+    <div class="status" id="profileStatus"></div>
   </div>
 </div>
 
@@ -962,14 +1028,142 @@
 
 
 
+  let loginToastShown = false;
+
+  function getDisplayName(user) {
+    return (user && user.user_metadata && user.user_metadata.full_name) || (user && user.email) || '';
+  }
+
   function updateUI(user){
     if(user){
       document.getElementById('loginState').classList.remove('active');
       document.getElementById('appState').classList.add('active');
-      showLoginToast('Logged in as ' + user.email);
+      document.getElementById('profileGreeting').textContent = 'Welcome, ' + getDisplayName(user);
+      // The widget's init/login events can fire more than once for a single
+      // sign-in (e.g. once per identity iframe), so only show this toast once
+      // per logged-in session rather than once per event firing.
+      if (!loginToastShown) {
+        loginToastShown = true;
+        showLoginToast('Logged in as ' + getDisplayName(user));
+      }
     } else {
+      loginToastShown = false;
       document.getElementById('loginState').classList.add('active');
       document.getElementById('appState').classList.remove('active');
+    }
+  }
+
+  /* ---------- Profile ---------- */
+
+  const COMMON_TIMEZONES = [
+    'Australia/Perth','Australia/Adelaide','Australia/Darwin','Australia/Brisbane',
+    'Australia/Sydney','Australia/Melbourne','Australia/Hobart',
+    'Pacific/Auckland','Asia/Singapore','Asia/Tokyo','Asia/Dubai','Asia/Kolkata',
+    'Europe/London','Europe/Paris','Europe/Berlin',
+    'America/New_York','America/Chicago','America/Denver','America/Los_Angeles',
+    'UTC'
+  ];
+
+  function getTimezoneList() {
+    // Not every browser supports Intl.supportedValuesOf yet - fall back to a
+    // curated list (Perth included, since that's where Owen shoots) if not.
+    try {
+      if (typeof Intl.supportedValuesOf === 'function') {
+        return Intl.supportedValuesOf('timeZone');
+      }
+    } catch (e) {}
+    return COMMON_TIMEZONES;
+  }
+
+  function populateTimezoneSelect(selected) {
+    const select = document.getElementById('profileTimezone');
+    const fallbackDefault = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Australia/Perth';
+    const current = selected || fallbackDefault;
+    const zoneSet = new Set(getTimezoneList());
+    zoneSet.add(current); // always keep the current value selectable
+    const sorted = Array.from(zoneSet).sort();
+    select.innerHTML = sorted.map(z =>
+      `<option value="${z}"${z === current ? ' selected' : ''}>${z.replace(/_/g, ' ')}</option>`
+    ).join('');
+  }
+
+  function openProfile() {
+    const user = netlifyIdentity.currentUser();
+    if (!user) return;
+    const statusEl = document.getElementById('profileStatus');
+    statusEl.textContent = '';
+    statusEl.className = 'status';
+    document.getElementById('profileName').value = (user.user_metadata && user.user_metadata.full_name) || '';
+    document.getElementById('profileEmail').value = user.email || '';
+    document.getElementById('profileNewPassword').value = '';
+    document.getElementById('profileConfirmPassword').value = '';
+    populateTimezoneSelect(user.user_metadata && user.user_metadata.timezone);
+    document.getElementById('profileOverlay').classList.add('active');
+  }
+
+  function closeProfile() {
+    document.getElementById('profileOverlay').classList.remove('active');
+    // Don't leave password text sitting in the DOM once the panel is closed.
+    document.getElementById('profileNewPassword').value = '';
+    document.getElementById('profileConfirmPassword').value = '';
+  }
+
+  async function saveProfile() {
+    const user = netlifyIdentity.currentUser();
+    if (!user) return;
+
+    const statusEl = document.getElementById('profileStatus');
+    const name = document.getElementById('profileName').value.trim();
+    const timezone = document.getElementById('profileTimezone').value;
+    const email = document.getElementById('profileEmail').value.trim();
+    const newPassword = document.getElementById('profileNewPassword').value;
+    const confirmPassword = document.getElementById('profileConfirmPassword').value;
+
+    if (newPassword || confirmPassword) {
+      if (newPassword.length < 8) {
+        statusEl.textContent = 'New password must be at least 8 characters.';
+        statusEl.className = 'status err';
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        statusEl.textContent = 'Passwords do not match.';
+        statusEl.className = 'status err';
+        return;
+      }
+    }
+    if (!email) {
+      statusEl.textContent = 'Email cannot be blank.';
+      statusEl.className = 'status err';
+      return;
+    }
+
+    const attrs = { data: { full_name: name, timezone: timezone } };
+    const emailChanged = email !== user.email;
+    if (emailChanged) attrs.email = email;
+    if (newPassword) attrs.password = newPassword;
+
+    const saveBtn = document.getElementById('profileSaveBtn');
+    saveBtn.disabled = true;
+    statusEl.textContent = 'Saving...';
+    statusEl.className = 'status working';
+
+    try {
+      await user.update(attrs);
+      document.getElementById('profileGreeting').textContent = 'Welcome, ' + getDisplayName(netlifyIdentity.currentUser());
+      document.getElementById('profileNewPassword').value = '';
+      document.getElementById('profileConfirmPassword').value = '';
+      statusEl.textContent = emailChanged
+        ? 'Saved. Check ' + email + ' for a confirmation link to finish the email change.'
+        : 'Saved.';
+      statusEl.className = 'status ok';
+      if (!emailChanged) {
+        setTimeout(closeProfile, 1200);
+      }
+    } catch (e) {
+      statusEl.textContent = e.message || 'Could not save changes.';
+      statusEl.className = 'status err';
+    } finally {
+      saveBtn.disabled = false;
     }
   }
 
