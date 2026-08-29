@@ -14,8 +14,14 @@
   // its real, un-hashed CSS class names (.modalContainer, .modalContent, .btn, .formControl, etc).
   // A <style> tag in THIS page can never reach inside that iframe - browsers don't let page CSS
   // cross a document boundary, even a same-origin one - so we inject our own <style> directly
-  // into the iframe's document instead, using those real class names, appended after the
-  // widget's own style so ours wins on equal specificity without needing !important everywhere.
+  // into the iframe's document instead, using those real class names.
+  //
+  // IMPORTANT (found via live debugging): the widget actually creates TWO iframes that both
+  // end up with id="netlify-identity-widget" (duplicate IDs - invalid HTML, but it's what the
+  // widget does). One is an empty helper iframe; the real login modal renders in the other.
+  // document.getElementById() only ever returns the first match in the DOM, which is the empty
+  // one - so this uses querySelectorAll (which returns every matching element, not just the
+  // first) and watches all of them, injecting into whichever one(s) actually get content.
   (function () {
     var THEME_ID = 'os-media-identity-theme';
     var THEME_CSS = [
@@ -52,37 +58,39 @@
       return true;
     }
 
+    var watchedIframes = new WeakSet();
+
     function watchIframe(iframe) {
-      try { if (injectInto(iframe.contentDocument)) return; } catch (e) {}
+      if (watchedIframes.has(iframe)) return;
+      watchedIframes.add(iframe);
       // The iframe starts at src="about:blank" and the widget only writes its
       // <head>/<body> into it a little later, so keep retrying on a short
-      // interval until that happens instead of giving up after a fixed count.
+      // interval until that happens, rather than giving up after a fixed count.
+      // Stop once the iframe itself is gone from the page.
       var retry = setInterval(function () {
-        try {
-          if (injectInto(iframe.contentDocument)) clearInterval(retry);
-        } catch (e) {}
+        if (!document.documentElement.contains(iframe)) { clearInterval(retry); return; }
+        try { injectInto(iframe.contentDocument); } catch (e) {}
       }, 150);
     }
 
-    // The widget doesn't create its iframe at page load - it's only created
+    function scanForIframes() {
+      // querySelectorAll matches every element with this id/name, not just the
+      // first (unlike getElementById) - needed because the widget duplicates
+      // this id across two iframes, see note above.
+      document.querySelectorAll(
+        'iframe#netlify-identity-widget, iframe[name="netlify-identity-widget"]'
+      ).forEach(watchIframe);
+    }
+
+    // The widget doesn't create its iframe(s) at page load - they only appear
     // when the widget actually mounts (e.g. on the first "Log in" click),
     // which can happen well after page load. A short timed poll from page
-    // load can therefore miss it entirely. Use a MutationObserver that keeps
+    // load can therefore miss them entirely. Use a MutationObserver that keeps
     // watching for as long as the page is open, so injection works no matter
-    // when the iframe actually shows up.
-    var existingIframe = document.getElementById('netlify-identity-widget');
-    if (existingIframe) {
-      watchIframe(existingIframe);
-    } else {
-      var observer = new MutationObserver(function () {
-        var iframe = document.getElementById('netlify-identity-widget');
-        if (iframe) {
-          watchIframe(iframe);
-          observer.disconnect();
-        }
-      });
-      observer.observe(document.documentElement, { childList: true, subtree: true });
-    }
+    // when the iframes actually show up.
+    scanForIframes();
+    var observer = new MutationObserver(scanForIframes);
+    observer.observe(document.documentElement, { childList: true, subtree: true });
   })();
 </script>
 <style>
