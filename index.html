@@ -863,55 +863,76 @@ function mobileNavGo(e, targetId){
 </script>
 <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <script>
+  // Single banner element, reused/updated in place rather than stacked, since
+  // the email-change flow below can update its message more than once
+  // ("log in to confirm..." -> "confirmed" / "could not confirm...").
   function showEmailChangeBanner(message, ok) {
-    var banner = document.createElement('div');
+    var id = 'email-change-banner';
+    var banner = document.getElementById(id);
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = id;
+      document.body.appendChild(banner);
+    }
     banner.textContent = message;
     banner.style.cssText =
       'position:fixed;top:0;left:0;right:0;z-index:99999;padding:16px 20px;' +
       'font-family:Inter,Arial,sans-serif;font-size:14px;text-align:center;' +
       'color:' + (ok ? '#15130F' : '#F7F5F0') + ';' +
       'background:' + (ok ? '#D4A537' : '#C43B3B') + ';';
-    document.body.appendChild(banner);
   }
 
   if (window.netlifyIdentity) {
     window.netlifyIdentity.on("init", user => {
-      if (!user) {
-        window.netlifyIdentity.on("login", () => {
-          document.location.href = "/admin.html";
-        });
-      }
-
       // Netlify Identity's "confirm your new email" links land here on the
       // homepage (whatever "Site URL" is set to in Netlify's Identity
       // settings) as a URL fragment like #email_change_token=... .
       // Confirming it means an authenticated PUT to the /user endpoint with
       // that token - NOT /verify, which only ever recognizes "signup" and
       // "recovery" and was the actual bug in an earlier attempt at this fix.
-      // Because it's authenticated, this only works if the browser already
-      // has an active admin session (the widget stores it in localStorage,
-      // shared across every page on this domain) - if you open the link
-      // somewhere you're not logged in, there's no session to confirm it with.
+      // Because it's authenticated, it needs an active session: if the link
+      // is opened somewhere without one (a different browser, or a mail
+      // app's own in-app browser, which is a separate logged-out context),
+      // this prompts for login with the CURRENT (old) email/password right
+      // here - that's still valid until this confirmation completes - and
+      // finishes the confirmation automatically once logged in, so the link
+      // works from any device rather than only the one you're already
+      // signed into.
       const match = location.hash.match(/(?:^#|&)email_change_token=([^&]+)/);
-      if (!match) return;
-      const token = decodeURIComponent(match[1]);
+      const pendingToken = match ? decodeURIComponent(match[1]) : null;
 
-      if (!user) {
-        showEmailChangeBanner('To confirm your new email, open this link in the same browser where you are logged in to the admin page (log in there first if needed), then click the link again.', false);
-        history.replaceState(null, '', location.pathname + location.search);
+      function finishEmailChangeConfirmation(loggedInUser) {
+        loggedInUser.update({ email_change_token: pendingToken })
+          .then(() => {
+            showEmailChangeBanner('Email address confirmed - you can now log in with your new email.', true);
+          })
+          .catch(err => {
+            showEmailChangeBanner('Could not confirm the email change: ' + (err && err.message ? err.message : 'the link may have expired.'), false);
+          })
+          .finally(() => {
+            history.replaceState(null, '', location.pathname + location.search);
+          });
+      }
+
+      if (pendingToken) {
+        if (user) {
+          finishEmailChangeConfirmation(user);
+        } else {
+          showEmailChangeBanner('Log in with your current email and password to confirm this change.', false);
+          netlifyIdentity.open('login');
+          netlifyIdentity.on('login', finishEmailChangeConfirmation);
+        }
+        // Skip the normal "redirect straight to admin on login" behavior
+        // below - it would navigate away before the confirmation above gets
+        // a chance to run.
         return;
       }
 
-      user.update({ email_change_token: token })
-        .then(() => {
-          showEmailChangeBanner('Email address confirmed - you can now log in with your new email.', true);
-        })
-        .catch(err => {
-          showEmailChangeBanner('Could not confirm the email change: ' + (err && err.message ? err.message : 'the link may have expired.'), false);
-        })
-        .finally(() => {
-          history.replaceState(null, '', location.pathname + location.search);
+      if (!user) {
+        window.netlifyIdentity.on("login", () => {
+          document.location.href = "/admin.html";
         });
+      }
     });
   }
 </script>
