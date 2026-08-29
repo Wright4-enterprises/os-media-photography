@@ -620,31 +620,43 @@
   }
 
   function deletePhotoFromEdit(key) {
-    const shoot = allShoots.find(s => s.id === editingShootId);
+    // Capture the shoot id NOW. This delete doesn't actually hit the server
+    // for 5 seconds (see showUndoToast) - if we read the live editingShootId
+    // variable instead of capturing it here, and the user navigates to a
+    // different shoot before those 5 seconds are up, the deferred request
+    // below would fire against whatever shoot happens to be open THEN,
+    // not the one the photo was actually deleted from.
+    const shootId = editingShootId;
+    const shoot = allShoots.find(s => s.id === shootId);
     if (!shoot) return;
 
     // Optimistically remove from the visible list
     shoot.photoKeys = shoot.photoKeys.filter(k => k !== key);
-    renderEditPhotoList(shoot);
+    if (editingShootId === shootId) renderEditPhotoList(shoot);
 
     showUndoToast(
       'Photo deleted.',
       () => {
         // Undo: put it back in view (nothing was sent to the server yet)
         shoot.photoKeys.push(key);
-        renderEditPhotoList(shoot);
+        if (editingShootId === shootId) renderEditPhotoList(shoot);
       },
       async () => {
         const headers = await getAuthHeader();
         const res = await fetch('/.netlify/functions/shoots-update', {
           method: 'POST',
           headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ shootId: editingShootId, deletePhotoKey: key })
+          body: JSON.stringify({ shootId, deletePhotoKey: key })
         });
+        if (!res.ok) {
+          const errText = await res.text().catch(() => '');
+          alert('Photo delete failed to save — it may still show up.\n\n' + (errText || ('Server returned ' + res.status)));
+          return;
+        }
         const data = await res.json();
-        const shootIndex = allShoots.findIndex(s => s.id === editingShootId);
-        allShoots[shootIndex] = data.shoot;
-        if (editingShootId) renderEditPhotoList(data.shoot);
+        const shootIndex = allShoots.findIndex(s => s.id === shootId);
+        if (shootIndex !== -1) allShoots[shootIndex] = data.shoot;
+        if (editingShootId === shootId) renderEditPhotoList(data.shoot);
       }
     );
   }
