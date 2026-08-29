@@ -200,6 +200,41 @@
     font-family:'Inter', sans-serif;
   }
   .toast-undo-btn:hover{ background:#E3B84A; }
+
+  /* --- Reskin the embedded Netlify Identity login widget ---
+     This is a third-party widget injected at runtime by netlify-identity-widget.js;
+     its internal CSS classes are build-hashed and not safe to target directly (they
+     can change between widget versions without notice). Instead we use the two
+     things it exposes that ARE stable: the CSS custom properties it reads internally
+     (--baseColor, --subduedColor, --errorColor, --fontFamily) and plain HTML
+     tag/attribute selectors (role="dialog", input, button[type="submit"]) that don't
+     depend on its internal class names at all. The widget still renders its login
+     card on a white background by default - that's a hard-coded color inside the
+     widget with no exposed override, so it stays white rather than fully dark, but
+     everything else (backdrop, buttons, focus states, error text, font) now matches
+     the site. */
+  [role="dialog"]{
+    --baseColor: var(--asphalt);
+    --subduedColor: var(--chrome-dim);
+    --errorColor: var(--crimson);
+    --fontFamily: 'Inter', sans-serif;
+  }
+  [role="dialog"] button[type="submit"]{
+    background: var(--amber) !important;
+    border-color: var(--amber) !important;
+    color: var(--asphalt) !important;
+    font-weight: 600 !important;
+  }
+  [role="dialog"] button[type="submit"]:hover,
+  [role="dialog"] button[type="submit"]:focus{
+    background: #E3B84A !important;
+    border-color: #E3B84A !important;
+  }
+  [role="dialog"] input:focus{
+    border-color: var(--amber) !important;
+    box-shadow: 0 0 0 3px rgba(212,165,55,0.25) !important;
+    outline: none !important;
+  }
 </style>
 </head>
 <body>
