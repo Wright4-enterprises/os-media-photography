@@ -58,6 +58,61 @@
       return true;
     }
 
+    // Adds a "Show"/"Hide" toggle next to every password field inside this
+    // document. The button is kept as a direct child of <body> (never
+    // inserted into the widget's own rendered form) and just repositioned to
+    // sit over each input's right edge on every tick - that avoids touching
+    // anything Preact (the widget's UI framework) manages, so it can't get
+    // wiped out or conflict with the widget's own re-rendering.
+    function enhancePasswordToggles(doc) {
+      if (!doc || !doc.body) return;
+      var registry = (doc.__osPwRegistry || (doc.__osPwRegistry = [])).filter(function (rec) {
+        if (!doc.contains(rec.input)) { rec.btn.remove(); return false; }
+        return true;
+      });
+
+      doc.querySelectorAll('input[type="password"], input[data-os-pw-revealed="1"]').forEach(function (input) {
+        input.style.paddingRight = '48px';
+        var rec = null;
+        for (var i = 0; i < registry.length; i++) {
+          if (registry[i].input === input) { rec = registry[i]; break; }
+        }
+        if (!rec) {
+          var btn = doc.createElement('button');
+          btn.type = 'button';
+          btn.style.cssText =
+            'position:absolute;z-index:99999;background:none;border:none;cursor:pointer;' +
+            'font-size:11px;font-family:Inter,Arial,sans-serif;font-weight:600;' +
+            'color:#8A8D93;padding:4px 8px;line-height:1;';
+          btn.addEventListener('mouseenter', function () { btn.style.color = '#D4A537'; });
+          btn.addEventListener('mouseleave', function () { btn.style.color = '#8A8D93'; });
+          btn.addEventListener('click', function () {
+            if (input.type === 'password') {
+              input.type = 'text';
+              input.setAttribute('data-os-pw-revealed', '1');
+            } else {
+              input.type = 'password';
+              input.removeAttribute('data-os-pw-revealed');
+            }
+            btn.textContent = input.type === 'password' ? 'Show' : 'Hide';
+          });
+          doc.body.appendChild(btn);
+          rec = { input: input, btn: btn };
+          registry.push(rec);
+        }
+        rec.btn.textContent = input.type === 'password' ? 'Show' : 'Hide';
+        var r = input.getBoundingClientRect();
+        var visible = r.width > 0 || r.height > 0;
+        rec.btn.style.display = visible ? 'block' : 'none';
+        if (visible) {
+          rec.btn.style.left = (r.right - 46) + 'px';
+          rec.btn.style.top = (r.top + r.height / 2 - 10) + 'px';
+        }
+      });
+
+      doc.__osPwRegistry = registry;
+    }
+
     var watchedIframes = new WeakSet();
 
     function watchIframe(iframe) {
@@ -69,7 +124,10 @@
       // Stop once the iframe itself is gone from the page.
       var retry = setInterval(function () {
         if (!document.documentElement.contains(iframe)) { clearInterval(retry); return; }
-        try { injectInto(iframe.contentDocument); } catch (e) {}
+        try {
+          injectInto(iframe.contentDocument);
+          enhancePasswordToggles(iframe.contentDocument);
+        } catch (e) {}
       }, 150);
     }
 
