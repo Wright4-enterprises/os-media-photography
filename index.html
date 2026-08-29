@@ -2,6 +2,64 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script>
+(function () {
+  // Netlify Identity's "confirm your new email" links point at this homepage
+  // (whatever "Site URL" is set to in Netlify's Identity settings) as a URL
+  // fragment like #email_change_token=... . The identity widget is supposed
+  // to detect and process that automatically, but a bug in its own bundled
+  // code (confirmed in the console as a ReferenceError inside its internal
+  // setup) makes that silently fail in some browsers - the link opens,
+  // nothing happens, and the email change never actually completes on the
+  // server, so login with the new address keeps failing. This handles it
+  // ourselves, directly against the GoTrue REST API the widget itself would
+  // otherwise call, before the (broken) widget gets a chance to try and fail.
+  // Placed first in <head> so it runs before anything else on the page.
+  var match = location.hash.match(/(?:^#|&)email_change_token=([^&]+)/);
+  if (!match) return;
+  var token = decodeURIComponent(match[1]);
+
+  function showBanner(message, ok) {
+    var banner = document.createElement('div');
+    banner.textContent = message;
+    banner.style.cssText =
+      'position:fixed;top:0;left:0;right:0;z-index:99999;padding:16px 20px;' +
+      'font-family:Inter,Arial,sans-serif;font-size:14px;text-align:center;' +
+      'color:' + (ok ? '#15130F' : '#F7F5F0') + ';' +
+      'background:' + (ok ? '#D4A537' : '#C43B3B') + ';';
+    if (document.body) {
+      document.body.appendChild(banner);
+    } else {
+      document.addEventListener('DOMContentLoaded', function () {
+        document.body.appendChild(banner);
+      });
+    }
+  }
+
+  fetch('/.netlify/identity/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'email_change', token: token })
+  })
+    .then(function (res) {
+      if (res.ok) {
+        showBanner('Email address confirmed - you can now log in with your new email.', true);
+      } else {
+        return res.json().catch(function () { return {}; }).then(function (data) {
+          showBanner('Could not confirm the email change: ' + (data.msg || 'the link may have expired.'), false);
+        });
+      }
+    })
+    .catch(function () {
+      showBanner('Could not confirm the email change - check your connection and try the link again.', false);
+    })
+    .finally(function () {
+      // Remove the token from the URL either way, so it can't be reused or
+      // confuse the identity widget's own (broken) auto-processing of it.
+      history.replaceState(null, '', location.pathname + location.search);
+    });
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OS Media — Car Photography, Perth</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
