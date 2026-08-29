@@ -7,6 +7,62 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script>
+  // Reskin the Netlify Identity login widget to match the site.
+  // The widget renders its whole UI inside a same-origin <iframe id="netlify-identity-widget">
+  // (src="about:blank") and injects its own <style> straight into that iframe's <head> using
+  // its real, un-hashed CSS class names (.modalContainer, .modalContent, .btn, .formControl, etc).
+  // A <style> tag in THIS page can never reach inside that iframe - browsers don't let page CSS
+  // cross a document boundary, even a same-origin one - so we inject our own <style> directly
+  // into the iframe's document instead, using those real class names, appended after the
+  // widget's own style so ours wins on equal specificity without needing !important everywhere.
+  (function () {
+    var THEME_ID = 'os-media-identity-theme';
+    var THEME_CSS = [
+      ':root{--baseColor:#15130F;--subduedColor:#8A8D93;--errorColor:#C43B3B;',
+      '--fontFamily:\'Inter\',sans-serif;}',
+      '.modalContainer::before{background-color:#15130F!important;}',
+      '.modalContent{background:#1E1B15!important;border:1px solid #2E2A21!important;color:#D8DADE!important;}',
+      '.btnHeader{background:#1E1B15!important;color:#8A8D93!important;border-bottom-color:#2E2A21!important;}',
+      '.btnHeader:focus,.btnHeader.active{background:#1E1B15!important;color:#D4A537!important;border-color:#D4A537!important;}',
+      '.formControl{background:#26221A!important;border-color:#2E2A21!important;color:#F7F5F0!important;}',
+      '.formControl:focus{border-color:#D4A537!important;box-shadow:0 0 0 3px rgba(212,165,55,0.25)!important;}',
+      '.btn{background:#D4A537!important;border-color:#D4A537!important;color:#15130F!important;font-weight:600!important;}',
+      '.btn:hover,.btn:focus{background:#E3B84A!important;border-color:#E3B84A!important;}',
+      '.btnClose{background:#26221A!important;color:#8A8D93!important;}',
+      '.btnClose:hover,.btnClose:focus{background:#2E2A21!important;color:#D4A537!important;}',
+      '.btnLink{color:#D4A537!important;border-bottom-color:#2E2A21!important;}',
+      '.hr{border-top-color:#2E2A21!important;}',
+      '.hr::before{background-color:#1E1B15!important;color:#8A8D93!important;}',
+      '.flashMessage{background-color:#26221A!important;color:#D8DADE!important;}',
+      '.error{background-color:rgba(196,59,59,0.12)!important;color:#C43B3B!important;}',
+      '.infoText{color:#D8DADE!important;}',
+      '.callOut{color:#8A8D93!important;}'
+    ].join('');
+
+    function tryInject() {
+      var iframe = document.getElementById('netlify-identity-widget');
+      if (!iframe) return false;
+      var doc;
+      try { doc = iframe.contentDocument; } catch (e) { return false; }
+      if (!doc || !doc.head) return false;
+      if (doc.getElementById(THEME_ID)) return true;
+      // Wait for the widget's own injected <style> so ours lands after it in source order.
+      if (!doc.head.querySelector('style')) return false;
+      var style = doc.createElement('style');
+      style.id = THEME_ID;
+      style.textContent = THEME_CSS;
+      doc.head.appendChild(style);
+      return true;
+    }
+
+    var attempts = 0;
+    var poll = setInterval(function () {
+      attempts++;
+      if (tryInject() || attempts > 60) clearInterval(poll);
+    }, 150);
+  })();
+</script>
 <style>
   :root{
     --asphalt: #15130F; --asphalt-2: #1E1B15; --asphalt-3: #26221A;
@@ -200,41 +256,6 @@
     font-family:'Inter', sans-serif;
   }
   .toast-undo-btn:hover{ background:#E3B84A; }
-
-  /* --- Reskin the embedded Netlify Identity login widget ---
-     This is a third-party widget injected at runtime by netlify-identity-widget.js;
-     its internal CSS classes are build-hashed and not safe to target directly (they
-     can change between widget versions without notice). Instead we use the two
-     things it exposes that ARE stable: the CSS custom properties it reads internally
-     (--baseColor, --subduedColor, --errorColor, --fontFamily) and plain HTML
-     tag/attribute selectors (role="dialog", input, button[type="submit"]) that don't
-     depend on its internal class names at all. The widget still renders its login
-     card on a white background by default - that's a hard-coded color inside the
-     widget with no exposed override, so it stays white rather than fully dark, but
-     everything else (backdrop, buttons, focus states, error text, font) now matches
-     the site. */
-  [role="dialog"]{
-    --baseColor: var(--asphalt);
-    --subduedColor: var(--chrome-dim);
-    --errorColor: var(--crimson);
-    --fontFamily: 'Inter', sans-serif;
-  }
-  [role="dialog"] button[type="submit"]{
-    background: var(--amber) !important;
-    border-color: var(--amber) !important;
-    color: var(--asphalt) !important;
-    font-weight: 600 !important;
-  }
-  [role="dialog"] button[type="submit"]:hover,
-  [role="dialog"] button[type="submit"]:focus{
-    background: #E3B84A !important;
-    border-color: #E3B84A !important;
-  }
-  [role="dialog"] input:focus{
-    border-color: var(--amber) !important;
-    box-shadow: 0 0 0 3px rgba(212,165,55,0.25) !important;
-    outline: none !important;
-  }
 </style>
 </head>
 <body>
