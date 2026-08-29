@@ -34,17 +34,28 @@ export default async (req, context) => {
   const slug = title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
   const shootId = `${slug}-${Date.now()}`;
 
-  const manifestRaw = await shootsStore.get('manifest.json');
-  const manifest = manifestRaw ? JSON.parse(manifestRaw) : [];
+  // Optimistic-concurrency retry: see shoots-update.js for why this matters -
+  // Netlify Blobs has no locking, so a plain read-modify-write can silently
+  // drop a concurrent change made by another action on the same manifest.json.
+  const MAX_ATTEMPTS = 8;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const { data: manifestRaw, etag } = await shootsStore.getWithMetadata('manifest.json');
+    const manifest = manifestRaw ? JSON.parse(manifestRaw) : [];
 
-  manifest.unshift({
-    id: shootId,
-    title,
-    date: date || new Date().toISOString().slice(0, 10),
-    photoKeys
-  });
+    manifest.unshift({
+      id: shootId,
+      title,
+      date: date || new Date().toISOString().slice(0, 10),
+      photoKeys
+    });
 
-  await shootsStore.set('manifest.json', JSON.stringify(manifest));
+    const writeOpts = etag ? { onlyIfMatch: etag } : { onlyIfNew: true };
+    const { modified } = await shootsStore.set('manifest.json', JSON.stringify(manifest), writeOpts);
+    if (modified) break;
+    if (attempt === MAX_ATTEMPTS - 1) {
+      return new Response('Could not save — too many conflicting updates happening at once. Please try again.', { status: 409 });
+    }
+  }
 
   return new Response(JSON.stringify({ ok: true, shootId }), {
     status: 200,
