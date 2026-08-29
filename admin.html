@@ -395,6 +395,10 @@
   });
   netlifyIdentity.on('login', user => {
     updateUI(user);
+    // The widget shows its own "Logged in as ..." confirmation panel right
+    // after login - we already show our own toast for that, so dismiss the
+    // widget's panel immediately instead of leaving two of them stacked.
+    netlifyIdentity.close();
   });
   netlifyIdentity.on('logout', () => {
     updateUI(null);
