@@ -469,7 +469,18 @@
   netlifyIdentity.on('logout', () => {
     updateUI(null);
   });
-  netlifyIdentity.init();
+  try {
+    netlifyIdentity.init();
+  } catch (e) {
+    // The widget's own bundled code can throw here in some browsers
+    // (observed: a ReferenceError deep inside its internal mobx setup).
+    // This whole app lives in one <script> block, so an uncaught throw here
+    // would abort every statement below it in the file - including the
+    // netlifyIdentity.on(...) calls further down that wire up loading the
+    // shoot list. Catching it keeps the rest of this script running even
+    // when the widget's internals misbehave.
+    console.error('netlifyIdentity.init() threw - continuing anyway:', e);
+  }
 
   async function getAuthHeader() {
     const user = netlifyIdentity.currentUser();
