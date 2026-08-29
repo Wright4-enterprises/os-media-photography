@@ -32,23 +32,35 @@ export default async (req, context) => {
 
  const shootsStore = getStore('shoots', { consistency: 'strong' });
 
+  // Optimistic-concurrency retry: Netlify Blobs has no locking, so a plain
+  // read-modify-write here can silently lose a concurrent change made by
+  // another action (archive, hide, add-photos) on the same manifest.json.
+  const MAX_ATTEMPTS = 8;
+  let photoKeysToDelete = null;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const { data: manifestRaw, etag } = await shootsStore.getWithMetadata('manifest.json');
+    const manifest = manifestRaw ? JSON.parse(manifestRaw) : [];
 
-  const manifestRaw = await shootsStore.get('manifest.json');
-  const manifest = manifestRaw ? JSON.parse(manifestRaw) : [];
+    const shoot = manifest.find(s => s.id === shootId);
+    if (!shoot) {
+      return new Response('Shoot not found.', { status: 404 });
+    }
+    photoKeysToDelete = shoot.photoKeys;
 
-  const shoot = manifest.find(s => s.id === shootId);
-  if (!shoot) {
-    return new Response('Shoot not found.', { status: 404 });
+    const updatedManifest = manifest.filter(s => s.id !== shootId);
+    const writeOpts = etag ? { onlyIfMatch: etag } : { onlyIfNew: true };
+    const { modified } = await shootsStore.set('manifest.json', JSON.stringify(updatedManifest), writeOpts);
+    if (modified) break;
+    if (attempt === MAX_ATTEMPTS - 1) {
+      return new Response('Could not save — too many conflicting updates happening at once. Please try again.', { status: 409 });
+    }
   }
 
-  // Delete every photo blob belonging to this shoot
-  for (const key of shoot.photoKeys) {
+  // Delete every photo blob belonging to this shoot (safe to do after the
+  // manifest write - the shoot is already gone from the list either way).
+  for (const key of photoKeysToDelete) {
     await shootsStore.delete(key);
   }
-
-  // Remove the shoot from the manifest and save
-  const updatedManifest = manifest.filter(s => s.id !== shootId);
-  await shootsStore.set('manifest.json', JSON.stringify(updatedManifest));
 
   return new Response(JSON.stringify({ ok: true }), {
     status: 200,
