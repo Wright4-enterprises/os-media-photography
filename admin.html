@@ -286,6 +286,11 @@
     font-family:'Inter', sans-serif;
   }
   .toast-undo-btn:hover{ background:#E3B84A; }
+  .toast-close-btn{
+    background:none; border:none; color:var(--chrome-dim); font-size:20px; line-height:1;
+    cursor:pointer; padding:0 2px; flex-shrink:0; font-family:'Inter', sans-serif;
+  }
+  .toast-close-btn:hover{ color:var(--amber); }
 </style>
 </head>
 <body>
@@ -444,6 +449,30 @@
     if (!toast) return;
     toast.classList.add('leaving');
     setTimeout(() => toast.remove(), 200);
+  }
+
+  // "Logged in as ..." toast - slides up on login, slides back out on its own
+  // after `seconds` unless dismissed early with the x button.
+  function showLoginToast(message, seconds = 6) {
+    const stack = document.getElementById('toastStack');
+    const toastId = 'toast-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.id = toastId;
+    toast.innerHTML = `
+      <span class="toast-msg">${message}</span>
+      <button class="toast-close-btn" aria-label="Dismiss">&times;</button>
+      <div class="toast-timer"><div class="toast-timer-fill" style="animation-duration:${seconds}s;"></div></div>
+    `;
+    stack.appendChild(toast);
+
+    const timeoutId = setTimeout(() => removeToast(toastId), seconds * 1000);
+
+    toast.querySelector('.toast-close-btn').addEventListener('click', () => {
+      clearTimeout(timeoutId);
+      removeToast(toastId);
+    });
   }
 
   /* ---------- Select mode / bulk actions ---------- */
@@ -933,7 +962,7 @@
     if(user){
       document.getElementById('loginState').classList.remove('active');
       document.getElementById('appState').classList.add('active');
-      document.getElementById('userEmail').textContent = 'Logged in as ' + user.email;
+      showLoginToast('Logged in as ' + user.email);
     } else {
       document.getElementById('loginState').classList.add('active');
       document.getElementById('appState').classList.remove('active');
