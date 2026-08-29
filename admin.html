@@ -40,15 +40,11 @@
       '.callOut{color:#8A8D93!important;}'
     ].join('');
 
-    function tryInject() {
-      var iframe = document.getElementById('netlify-identity-widget');
-      if (!iframe) return false;
-      var doc;
-      try { doc = iframe.contentDocument; } catch (e) { return false; }
+    function injectInto(doc) {
       if (!doc || !doc.head) return false;
       if (doc.getElementById(THEME_ID)) return true;
-      // Wait for the widget's own injected <style> so ours lands after it in source order.
-      if (!doc.head.querySelector('style')) return false;
+      // No need to wait for the widget's own <style> tag - every rule above
+      // uses !important, so ours wins regardless of injection order.
       var style = doc.createElement('style');
       style.id = THEME_ID;
       style.textContent = THEME_CSS;
@@ -56,11 +52,37 @@
       return true;
     }
 
-    var attempts = 0;
-    var poll = setInterval(function () {
-      attempts++;
-      if (tryInject() || attempts > 60) clearInterval(poll);
-    }, 150);
+    function watchIframe(iframe) {
+      try { if (injectInto(iframe.contentDocument)) return; } catch (e) {}
+      // The iframe starts at src="about:blank" and the widget only writes its
+      // <head>/<body> into it a little later, so keep retrying on a short
+      // interval until that happens instead of giving up after a fixed count.
+      var retry = setInterval(function () {
+        try {
+          if (injectInto(iframe.contentDocument)) clearInterval(retry);
+        } catch (e) {}
+      }, 150);
+    }
+
+    // The widget doesn't create its iframe at page load - it's only created
+    // when the widget actually mounts (e.g. on the first "Log in" click),
+    // which can happen well after page load. A short timed poll from page
+    // load can therefore miss it entirely. Use a MutationObserver that keeps
+    // watching for as long as the page is open, so injection works no matter
+    // when the iframe actually shows up.
+    var existingIframe = document.getElementById('netlify-identity-widget');
+    if (existingIframe) {
+      watchIframe(existingIframe);
+    } else {
+      var observer = new MutationObserver(function () {
+        var iframe = document.getElementById('netlify-identity-widget');
+        if (iframe) {
+          watchIframe(iframe);
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+    }
   })();
 </script>
 <style>
