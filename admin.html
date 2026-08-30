@@ -363,12 +363,24 @@
     border:2px dashed var(--amber); border-radius:8px; background:transparent;
     aspect-ratio: 4/3.85;
   }
-  .edit-photo-thumb{ aspect-ratio:4/3; background:var(--asphalt-2); overflow:hidden; pointer-events:none; }
+  .edit-photo-thumb{ aspect-ratio:4/3; background:var(--asphalt-2); overflow:hidden; pointer-events:none; position:relative; }
   .edit-photo-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .cover-star-btn{
+    position:absolute; top:8px; left:8px; width:30px; height:30px; border-radius:50%;
+    background:rgba(21,19,15,0.85); border:1px solid var(--line); color:var(--chrome-dim);
+    display:flex; align-items:center; justify-content:center; font-size:15px; line-height:1;
+    cursor:pointer; pointer-events:auto; z-index:2; padding:0;
+    transition: color .15s ease, border-color .15s ease, background-color .15s ease;
+  }
+  .cover-star-btn:hover{ border-color:var(--amber); color:var(--amber); }
+  .cover-star-btn.is-cover{ background:var(--amber); border-color:var(--amber); color:var(--asphalt); }
   .edit-photo-controls-row{ padding:8px 10px 10px; display:flex; flex-direction:column; gap:6px; }
   .edit-photo-controls-row label{
-    display:flex; align-items:center; gap:6px; margin:0; font-weight:400; font-size:11.5px; color:var(--chrome-dim);
+    display:flex; align-items:center; gap:7px; margin:0; font-weight:400; font-size:11.5px; color:var(--chrome-dim);
     text-transform:none; cursor:pointer;
+  }
+  .edit-photo-controls-row input[type=checkbox]{
+    width:15px; height:15px; margin:0; accent-color:var(--amber); cursor:pointer; flex-shrink:0;
   }
   .edit-photo-controls-row .del-btn{
     background:none; border:none; color:var(--crimson); font-size:11px; cursor:pointer;
@@ -800,12 +812,14 @@
            data-key="${key}"
            ondragstart="handleDragStart(event)"
            ondragend="handleDragEnd(event)">
-        <div class="edit-photo-thumb"><img src="/.netlify/functions/photo?key=${encodeURIComponent(key)}" /></div>
+        <div class="edit-photo-thumb">
+          <img src="/.netlify/functions/photo?key=${encodeURIComponent(key)}" />
+          <button type="button"
+                  class="cover-star-btn${key === shoot.coverPhoto ? ' is-cover' : ''}"
+                  title="${key === shoot.coverPhoto ? 'Cover photo' : 'Set as cover photo'}"
+                  onclick="setEditCover('${key}')">&#9733;</button>
+        </div>
         <div class="edit-photo-controls-row">
-          <label>
-            <input type="radio" name="editCover" ${key === shoot.coverPhoto ? 'checked' : ''} onclick="setEditCover('${key}')" />
-            Cover
-          </label>
           <label>
             <input type="checkbox" ${(shoot.featuredPhotos || []).includes(key) ? 'checked' : ''} onclick="toggleEditFeatured('${key}', this.checked)" />
             Homepage
@@ -901,6 +915,16 @@
   function setEditCover(key) {
     const shoot = allShoots.find(s => s.id === editingShootId);
     shoot.coverPhoto = key;
+    // Only one photo can be the cover, so re-sync every star badge rather than
+    // just the one that was clicked - the previous cover's star needs to turn
+    // back off.
+    document.querySelectorAll('#editPhotoList .edit-photo-card').forEach(card => {
+      const btn = card.querySelector('.cover-star-btn');
+      if (!btn) return;
+      const isCover = card.dataset.key === key;
+      btn.classList.toggle('is-cover', isCover);
+      btn.title = isCover ? 'Cover photo' : 'Set as cover photo';
+    });
   }
 
   function toggleEditFeatured(key, isChecked) {
