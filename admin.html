@@ -43,7 +43,8 @@
       '.flashMessage{background-color:#26221A!important;color:#D8DADE!important;}',
       '.error{background-color:rgba(196,59,59,0.12)!important;color:#C43B3B!important;}',
       '.infoText{color:#D8DADE!important;}',
-      '.callOut{color:#8A8D93!important;}'
+      '.callOut{color:#8A8D93!important;}',
+      'a[href="https://www.netlify.com"]{display:none!important;}'
     ].join('');
 
     function injectInto(doc) {
@@ -528,7 +529,11 @@
     updateUI(null);
   });
   try {
-    netlifyIdentity.init();
+    // logo: false is a real, documented netlify-identity-widget option -
+    // it stops the widget rendering its own "Coded by Netlify" badge inside
+    // the modal (the a[href="netlify.com"] CSS rule above is a backup for
+    // this in case a future widget version ignores the option).
+    netlifyIdentity.init({ logo: false });
   } catch (e) {
     // The widget's own bundled code can throw here in some browsers
     // (observed: a ReferenceError deep inside its internal mobx setup).
