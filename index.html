@@ -863,6 +863,41 @@ function mobileNavGo(e, targetId){
 </script>
 <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <script>
+  // Password-reset, signup-confirmation, and invite links land here as a URL
+  // fragment (#recovery_token=..., #confirmation_token=..., #invite_token=...).
+  // Netlify Identity's widget only acts on that token if it thinks nobody is
+  // already logged in on this browser - confirmed straight from its source,
+  // it stores the current session under one shared "gotrue.user" key in
+  // localStorage and treats an existing session as higher priority than a
+  // token in the URL. In practice, a login left over in another open tab (or
+  // from testing this site earlier) can silently make one of these links do
+  // nothing at all. None of these three token types need an existing session,
+  // so clear one out before the widget gets a chance to look at it.
+  // (email_change_token is deliberately left alone here - that flow needs
+  // the existing session, see the confirmation handler further down.)
+  if (/(?:^#|&)(recovery_token|confirmation_token|invite_token)=/.test(location.hash)) {
+    try { localStorage.removeItem('gotrue.user'); } catch (e) {}
+  }
+
+  // The widget's own automatic init - which is what actually reads the token
+  // above and opens the matching screen - runs later, on DOMContentLoaded,
+  // from inside its own bundled code. We already know that code can throw a
+  // ReferenceError in some browsers (found earlier debugging the admin
+  // page's "shoots disappeared" bug). If it throws before reaching the
+  // token-parsing step, the link just silently does nothing. Calling init()
+  // again ourselves here - wrapped in try/catch, and running earlier since
+  // this executes during initial parsing rather than waiting for
+  // DOMContentLoaded - gives the token-handling logic a second,
+  // error-protected chance to run.
+  if (window.netlifyIdentity) {
+    try {
+      netlifyIdentity.init();
+    } catch (e) {
+      console.error('netlifyIdentity.init() threw - continuing anyway:', e);
+    }
+  }
+</script>
+<script>
   // Reskin the Netlify Identity login widget to match the site (same as
   // admin.html - kept identical so every login popup on the site looks the
   // same, whichever page it's opened from). See admin.html's copy of this
@@ -1049,6 +1084,19 @@ function mobileNavGo(e, targetId){
       // finishes the confirmation automatically once logged in, so the link
       // works from any device rather than only the one you're already
       // signed into.
+      // The widget's own recovery/confirmation/invite screens are bare - no
+      // email address shown, nothing saying what's about to happen - which is
+      // a real gap in Netlify's own UI we can't edit directly (it renders
+      // inside their iframe). This banner at least tells you plainly what
+      // you're doing here, even though it can't name which account.
+      if (/(?:^#|&)recovery_token=/.test(location.hash)) {
+        showEmailChangeBanner('Resetting your password - enter a new one below.', true);
+      } else if (/(?:^#|&)confirmation_token=/.test(location.hash)) {
+        showEmailChangeBanner('Confirming your account...', true);
+      } else if (/(?:^#|&)invite_token=/.test(location.hash)) {
+        showEmailChangeBanner('Setting up your new login - choose a password below.', true);
+      }
+
       const match = location.hash.match(/(?:^#|&)email_change_token=([^&]+)/);
       const pendingToken = match ? decodeURIComponent(match[1]) : null;
 

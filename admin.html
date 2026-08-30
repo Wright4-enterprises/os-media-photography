@@ -260,6 +260,14 @@
     color:var(--chrome-dim); letter-spacing:.05em; margin-top:26px; margin-bottom:2px;
   }
   .profile-section-label:first-of-type{ margin-top:0; }
+  .profile-divider{ height:1px; background:var(--line); margin:28px 0 6px; }
+  .profile-current-value{ font-size:14px; color:var(--white); font-family:'Inter', sans-serif; }
+  .profile-inline-link{
+    background:none; border:none; padding:0; margin-top:6px; cursor:pointer;
+    font-family:'JetBrains Mono', monospace; font-size:11px; text-transform:uppercase;
+    letter-spacing:.05em; color:var(--amber); text-decoration:underline;
+  }
+  .profile-inline-link:hover{ color:#E3B84A; }
   input[type=file]{
     width:100%; background:var(--asphalt-3); border:1px dashed var(--line); border-radius:5px;
     padding:20px 12px; color:var(--chrome-dim); font-family:'Inter', sans-serif; font-size:13px;
@@ -534,21 +542,40 @@
     <div class="profile-section-label">Timezone</div>
     <select id="profileTimezone"></select>
 
-    <div class="profile-section-label">Login email</div>
-    <input type="email" id="profileEmail">
-    <div class="field-hint">Changing this sends a confirmation link to the new address - the change won't take effect until you click it.</div>
-
-    <div class="profile-section-label">Change password</div>
-    <input type="password" id="profileNewPassword" placeholder="New password" autocomplete="new-password">
-    <input type="password" id="profileConfirmPassword" placeholder="Confirm new password" autocomplete="new-password" style="margin-top:10px;">
-    <div class="field-hint">Leave both blank to keep your current password.</div>
-
-    <div class="edit-actions">
-      <button class="btn" id="profileSaveBtn" onclick="saveProfile()">Save changes</button>
-      <button class="btn btn-secondary" onclick="closeProfile()">Cancel</button>
+    <div class="edit-actions" style="margin-top:18px;">
+      <button class="btn" id="profileInfoSaveBtn" onclick="saveProfileInfo()">Save info</button>
     </div>
+    <div class="status" id="profileInfoStatus"></div>
 
-    <div class="status" id="profileStatus"></div>
+    <div class="profile-divider"></div>
+
+    <div class="profile-section-label">Login email</div>
+    <div class="profile-current-value" id="profileCurrentEmail"></div>
+    <button type="button" class="profile-inline-link" id="profileEmailToggle" onclick="toggleEmailEdit()">Change email</button>
+    <div id="profileEmailFields" style="display:none;">
+      <input type="email" id="profileNewEmail" placeholder="New email" style="margin-top:10px;">
+      <div class="field-hint">We'll send a confirmation link to that address. Your current email keeps working normally until you click it - nothing changes until then.</div>
+      <div class="edit-actions" style="margin-top:14px;">
+        <button class="btn" id="profileEmailSaveBtn" onclick="saveProfileEmail()">Send confirmation link</button>
+        <button type="button" class="btn btn-secondary" onclick="toggleEmailEdit(false)">Cancel</button>
+      </div>
+    </div>
+    <div class="status" id="profileEmailStatus"></div>
+
+    <div class="profile-divider"></div>
+
+    <div class="profile-section-label">Password</div>
+    <button type="button" class="profile-inline-link" id="profilePasswordToggle" onclick="togglePasswordEdit()">Change password</button>
+    <div id="profilePasswordFields" style="display:none;">
+      <input type="password" id="profileNewPassword" placeholder="New password" autocomplete="new-password" style="margin-top:10px;">
+      <input type="password" id="profileConfirmPassword" placeholder="Confirm new password" autocomplete="new-password" style="margin-top:10px;">
+      <div class="field-hint">This takes effect straight away. You'll stay logged in here, but need the new password next time you log in.</div>
+      <div class="edit-actions" style="margin-top:14px;">
+        <button class="btn" id="profilePasswordSaveBtn" onclick="saveProfilePassword()">Update password</button>
+        <button type="button" class="btn btn-secondary" onclick="togglePasswordEdit(false)">Cancel</button>
+      </div>
+    </div>
+    <div class="status" id="profilePasswordStatus"></div>
   </div>
 </div>
 
@@ -1233,87 +1260,169 @@
     ).join('');
   }
 
+  // The profile panel is split into three independent actions (info, email,
+  // password) that each save on their own, rather than one combined "Save
+  // changes" button that touches your login credentials any time you just
+  // wanted to fix your timezone. Email and password fields also start
+  // collapsed behind a "Change..." link so the panel doesn't open looking
+  // like editing your name might also silently change your login.
   function openProfile() {
     const user = netlifyIdentity.currentUser();
     if (!user) return;
-    const statusEl = document.getElementById('profileStatus');
-    statusEl.textContent = '';
-    statusEl.className = 'status';
+
     document.getElementById('profileName').value = (user.user_metadata && user.user_metadata.full_name) || '';
     document.getElementById('profileRole').value = getDisplayRole(user);
-    document.getElementById('profileEmail').value = user.email || '';
-    document.getElementById('profileNewPassword').value = '';
-    document.getElementById('profileConfirmPassword').value = '';
     populateTimezoneSelect(user.user_metadata && user.user_metadata.timezone);
+    document.getElementById('profileInfoStatus').textContent = '';
+    document.getElementById('profileInfoStatus').className = 'status';
+
+    document.getElementById('profileCurrentEmail').textContent = user.email || '';
+    toggleEmailEdit(false);
+    document.getElementById('profileEmailStatus').textContent = '';
+    document.getElementById('profileEmailStatus').className = 'status';
+
+    togglePasswordEdit(false);
+    document.getElementById('profilePasswordStatus').textContent = '';
+    document.getElementById('profilePasswordStatus').className = 'status';
+
     document.getElementById('profileOverlay').classList.add('active');
   }
 
   function closeProfile() {
     document.getElementById('profileOverlay').classList.remove('active');
     // Don't leave password text sitting in the DOM once the panel is closed.
-    document.getElementById('profileNewPassword').value = '';
-    document.getElementById('profileConfirmPassword').value = '';
+    togglePasswordEdit(false);
   }
 
-  async function saveProfile() {
+  function toggleEmailEdit(show) {
+    const fields = document.getElementById('profileEmailFields');
+    const isShowing = typeof show === 'boolean' ? show : fields.style.display === 'none';
+    fields.style.display = isShowing ? 'block' : 'none';
+    document.getElementById('profileEmailToggle').style.display = isShowing ? 'none' : 'inline-block';
+    document.getElementById('profileNewEmail').value = '';
+    document.getElementById('profileEmailStatus').textContent = '';
+    document.getElementById('profileEmailStatus').className = 'status';
+  }
+
+  function togglePasswordEdit(show) {
+    const fields = document.getElementById('profilePasswordFields');
+    const isShowing = typeof show === 'boolean' ? show : fields.style.display === 'none';
+    fields.style.display = isShowing ? 'block' : 'none';
+    document.getElementById('profilePasswordToggle').style.display = isShowing ? 'none' : 'inline-block';
+    document.getElementById('profileNewPassword').value = '';
+    document.getElementById('profileConfirmPassword').value = '';
+    document.getElementById('profilePasswordStatus').textContent = '';
+    document.getElementById('profilePasswordStatus').className = 'status';
+  }
+
+  async function saveProfileInfo() {
     const user = netlifyIdentity.currentUser();
     if (!user) return;
 
-    const statusEl = document.getElementById('profileStatus');
+    const statusEl = document.getElementById('profileInfoStatus');
     const name = document.getElementById('profileName').value.trim();
     const role = document.getElementById('profileRole').value.trim();
     const timezone = document.getElementById('profileTimezone').value;
-    const email = document.getElementById('profileEmail').value.trim();
-    const newPassword = document.getElementById('profileNewPassword').value;
-    const confirmPassword = document.getElementById('profileConfirmPassword').value;
 
-    if (newPassword || confirmPassword) {
-      if (newPassword.length < 8) {
-        statusEl.textContent = 'New password must be at least 8 characters.';
-        statusEl.className = 'status err';
-        return;
-      }
-      if (newPassword !== confirmPassword) {
-        statusEl.textContent = 'Passwords do not match.';
-        statusEl.className = 'status err';
-        return;
-      }
-    }
-    if (!email) {
-      statusEl.textContent = 'Email cannot be blank.';
-      statusEl.className = 'status err';
-      return;
-    }
-
-    const attrs = { data: { full_name: name, role: role, timezone: timezone } };
-    const emailChanged = email !== user.email;
-    if (emailChanged) attrs.email = email;
-    if (newPassword) attrs.password = newPassword;
-
-    const saveBtn = document.getElementById('profileSaveBtn');
-    saveBtn.disabled = true;
+    const btn = document.getElementById('profileInfoSaveBtn');
+    btn.disabled = true;
     statusEl.textContent = 'Saving...';
     statusEl.className = 'status working';
 
     try {
-      await user.update(attrs);
+      await user.update({ data: { full_name: name, role: role, timezone: timezone } });
       const updatedUser = netlifyIdentity.currentUser();
       document.getElementById('profileGreeting').textContent = greetingText(updatedUser);
       document.getElementById('pageSubtitle').textContent = getDisplayRole(updatedUser) || 'Shoot manager';
-      document.getElementById('profileNewPassword').value = '';
-      document.getElementById('profileConfirmPassword').value = '';
-      statusEl.textContent = emailChanged
-        ? 'Saved. Check ' + email + ' for a confirmation link to finish the email change.'
-        : 'Saved.';
+      statusEl.textContent = 'Saved.';
       statusEl.className = 'status ok';
-      if (!emailChanged) {
-        setTimeout(closeProfile, 1200);
-      }
     } catch (e) {
       statusEl.textContent = e.message || 'Could not save changes.';
       statusEl.className = 'status err';
     } finally {
-      saveBtn.disabled = false;
+      btn.disabled = false;
+    }
+  }
+
+  async function saveProfileEmail() {
+    const user = netlifyIdentity.currentUser();
+    if (!user) return;
+
+    const statusEl = document.getElementById('profileEmailStatus');
+    const email = document.getElementById('profileNewEmail').value.trim();
+
+    if (!email) {
+      statusEl.textContent = 'Enter a new email address.';
+      statusEl.className = 'status err';
+      return;
+    }
+    if (email === user.email) {
+      statusEl.textContent = "That's already your current email.";
+      statusEl.className = 'status err';
+      return;
+    }
+
+    const btn = document.getElementById('profileEmailSaveBtn');
+    btn.disabled = true;
+    statusEl.textContent = 'Sending...';
+    statusEl.className = 'status working';
+
+    try {
+      await user.update({ email: email });
+      statusEl.textContent = 'Check ' + email + ' for a confirmation link. Your current email keeps working until you click it.';
+      statusEl.className = 'status ok';
+      document.getElementById('profileEmailToggle').style.display = 'inline-block';
+      document.getElementById('profileEmailFields').style.display = 'none';
+    } catch (e) {
+      statusEl.textContent = e.message || 'Could not start the email change.';
+      statusEl.className = 'status err';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function saveProfilePassword() {
+    const user = netlifyIdentity.currentUser();
+    if (!user) return;
+
+    const statusEl = document.getElementById('profilePasswordStatus');
+    const newPassword = document.getElementById('profileNewPassword').value;
+    const confirmPassword = document.getElementById('profileConfirmPassword').value;
+
+    if (!newPassword || !confirmPassword) {
+      statusEl.textContent = 'Fill in both boxes below.';
+      statusEl.className = 'status err';
+      return;
+    }
+    if (newPassword.length < 8) {
+      statusEl.textContent = 'New password must be at least 8 characters.';
+      statusEl.className = 'status err';
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      statusEl.textContent = 'Passwords do not match.';
+      statusEl.className = 'status err';
+      return;
+    }
+
+    const btn = document.getElementById('profilePasswordSaveBtn');
+    btn.disabled = true;
+    statusEl.textContent = 'Saving...';
+    statusEl.className = 'status working';
+
+    try {
+      await user.update({ password: newPassword });
+      statusEl.textContent = 'Password updated.';
+      statusEl.className = 'status ok';
+      document.getElementById('profileNewPassword').value = '';
+      document.getElementById('profileConfirmPassword').value = '';
+      document.getElementById('profilePasswordToggle').style.display = 'inline-block';
+      document.getElementById('profilePasswordFields').style.display = 'none';
+    } catch (e) {
+      statusEl.textContent = e.message || 'Could not update your password.';
+      statusEl.className = 'status err';
+    } finally {
+      btn.disabled = false;
     }
   }
 
