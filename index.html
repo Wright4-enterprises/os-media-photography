@@ -957,6 +957,36 @@ function mobileNavGo(e, targetId){
       doc.__osPwRegistry = registry;
     }
 
+    // The widget wipes its own email/password inputs back to blank the moment
+    // a login attempt fails (wrong email or password), forcing a full retype.
+    // We can't change that behaviour inside the widget itself, so instead we
+    // keep a running copy of whatever's currently typed, and the instant an
+    // error message appears (meaning the widget just cleared the form), we
+    // write those values straight back into the now-empty inputs.
+    function preserveLoginFields(doc) {
+      if (!doc || !doc.body) return;
+      var cache = doc.__osLoginCache || (doc.__osLoginCache = { email: '', password: '', hadError: false });
+
+      var emailInput = doc.querySelector('input[name="email"]');
+      var passwordInput = doc.querySelector('input[name="password"]');
+      var hasError = !!doc.querySelector('.flashMessage.error, .error');
+
+      if (hasError && !cache.hadError) {
+        if (emailInput && !emailInput.value && cache.email) {
+          emailInput.value = cache.email;
+          emailInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        if (passwordInput && !passwordInput.value && cache.password) {
+          passwordInput.value = cache.password;
+          passwordInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }
+      cache.hadError = hasError;
+
+      if (emailInput && emailInput.value) cache.email = emailInput.value;
+      if (passwordInput && passwordInput.value) cache.password = passwordInput.value;
+    }
+
     var watchedIframes = new WeakSet();
 
     function watchIframe(iframe) {
@@ -967,6 +997,7 @@ function mobileNavGo(e, targetId){
         try {
           injectInto(iframe.contentDocument);
           enhancePasswordToggles(iframe.contentDocument);
+          preserveLoginFields(iframe.contentDocument);
         } catch (e) {}
       }, 150);
     }
