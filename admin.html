@@ -389,7 +389,7 @@
 <body>
 <div class="wrap">
   <div class="brand">OS <span>MEDIA</span></div>
-  <div class="sub">Shoot manager</div>
+  <div class="sub" id="pageSubtitle">Shoot manager</div>
 
   <div id="loginState">
     <div class="login-box">
@@ -483,6 +483,10 @@
 
     <div class="profile-section-label">Display name</div>
     <input type="text" id="profileName" placeholder="e.g. Owen Smith">
+
+    <div class="profile-section-label">Role</div>
+    <input type="text" id="profileRole" placeholder="e.g. Website Manager">
+    <div class="field-hint">A label shown next to your name once you're logged in - doesn't change what you can do here.</div>
 
     <div class="profile-section-label">Timezone</div>
     <select id="profileTimezone"></select>
@@ -1108,11 +1112,23 @@
     return (user && user.user_metadata && user.user_metadata.full_name) || (user && user.email) || '';
   }
 
+  // Purely a label each person sets for themselves in their profile - it
+  // doesn't grant or restrict anything, it just shows up next to their name.
+  function getDisplayRole(user) {
+    return (user && user.user_metadata && user.user_metadata.role) || '';
+  }
+
+  function greetingText(user) {
+    const role = getDisplayRole(user);
+    return 'Welcome, ' + getDisplayName(user) + (role ? ' — ' + role : '');
+  }
+
   function updateUI(user){
     if(user){
       document.getElementById('loginState').classList.remove('active');
       document.getElementById('appState').classList.add('active');
-      document.getElementById('profileGreeting').textContent = 'Welcome, ' + getDisplayName(user);
+      document.getElementById('profileGreeting').textContent = greetingText(user);
+      document.getElementById('pageSubtitle').textContent = getDisplayRole(user) || 'Shoot manager';
       // The widget's init/login events can fire more than once for a single
       // sign-in (e.g. once per identity iframe), so only show this toast once
       // per logged-in session rather than once per event firing.
@@ -1124,6 +1140,7 @@
       loginToastShown = false;
       document.getElementById('loginState').classList.add('active');
       document.getElementById('appState').classList.remove('active');
+      document.getElementById('pageSubtitle').textContent = 'Shoot manager';
     }
   }
 
@@ -1168,6 +1185,7 @@
     statusEl.textContent = '';
     statusEl.className = 'status';
     document.getElementById('profileName').value = (user.user_metadata && user.user_metadata.full_name) || '';
+    document.getElementById('profileRole').value = getDisplayRole(user);
     document.getElementById('profileEmail').value = user.email || '';
     document.getElementById('profileNewPassword').value = '';
     document.getElementById('profileConfirmPassword').value = '';
@@ -1188,6 +1206,7 @@
 
     const statusEl = document.getElementById('profileStatus');
     const name = document.getElementById('profileName').value.trim();
+    const role = document.getElementById('profileRole').value.trim();
     const timezone = document.getElementById('profileTimezone').value;
     const email = document.getElementById('profileEmail').value.trim();
     const newPassword = document.getElementById('profileNewPassword').value;
@@ -1211,7 +1230,7 @@
       return;
     }
 
-    const attrs = { data: { full_name: name, timezone: timezone } };
+    const attrs = { data: { full_name: name, role: role, timezone: timezone } };
     const emailChanged = email !== user.email;
     if (emailChanged) attrs.email = email;
     if (newPassword) attrs.password = newPassword;
@@ -1223,7 +1242,9 @@
 
     try {
       await user.update(attrs);
-      document.getElementById('profileGreeting').textContent = 'Welcome, ' + getDisplayName(netlifyIdentity.currentUser());
+      const updatedUser = netlifyIdentity.currentUser();
+      document.getElementById('profileGreeting').textContent = greetingText(updatedUser);
+      document.getElementById('pageSubtitle').textContent = getDisplayRole(updatedUser) || 'Shoot manager';
       document.getElementById('profileNewPassword').value = '';
       document.getElementById('profileConfirmPassword').value = '';
       statusEl.textContent = emailChanged
