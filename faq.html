@@ -9,16 +9,13 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-
 <meta name="description" content="Answers to common questions about booking a shoot with OS Media — turnaround times, coverage area, usage rights, and more.">
-
 <meta property="og:title" content="FAQs — OS Media">
 <meta property="og:description" content="Answers to common questions about booking a shoot with OS Media — turnaround times, coverage area, usage rights, and more.">
 <meta property="og:image" content="https://osmediaphotography.com/og-image.png">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://osmediaphotography.com/faq.html">
 <meta name="twitter:card" content="summary_large_image">
-
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -45,7 +42,6 @@
   }
   a{color:inherit;}
   .wrap{max-width: 1080px; margin:0 auto; padding: 0 28px;}
-
   nav{
     position: sticky; top:0; z-index:50;
     background: rgba(21,19,15,0.85);
@@ -109,12 +105,10 @@
   }
   .mobile-menu a:hover{ color:var(--white); }
   .mobile-menu .nav-cta{ margin:14px 28px 18px; text-align:center; }
-
   .rev-strip{
     height: 3px; width: 100%;
     background: linear-gradient(90deg, var(--amber) 0%, var(--amber) 60%, var(--crimson) 85%, var(--crimson) 100%);
   }
-
   header.top{ padding: 56px 0 36px; text-align:center; }
   .eyebrow{
     font-family:'JetBrains Mono', monospace; font-size:12px; letter-spacing:0.16em;
@@ -125,7 +119,6 @@
     font-size: clamp(30px, 6vw, 44px); color:var(--white); letter-spacing:0.01em; margin-bottom:14px;
   }
   header.top p{ color:var(--chrome-dim); font-size:15px; max-width:52ch; margin:0 auto; }
-
   .section{padding: 48px 0 72px;}
   h2{
     font-family:'Oswald', sans-serif; font-weight:600; text-transform:uppercase;
@@ -135,14 +128,12 @@
   .section ul, .section ol{ margin:0 0 16px 20px; color:var(--chrome-dim); font-size:14.5px; }
   .section li{ margin-bottom:8px; }
   .section a.inline-link{ color:var(--amber); text-decoration:underline; }
-
   .legal-block{ margin-bottom:36px; }
   .legal-block:last-child{ margin-bottom:0; }
   .updated-note{
     font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--chrome-dim);
     margin-bottom:36px; text-transform:uppercase; letter-spacing:0.05em;
   }
-
   .toggle-block{ border-bottom:1px solid var(--line); padding:20px 0; cursor:pointer; }
   .toggle-block:first-child{ padding-top:0; }
   .toggle-head{
@@ -165,7 +156,6 @@
   }
   .toggle-block.is-open .toggle-body{ grid-template-rows: 1fr; opacity:1; }
   .toggle-block.is-open .toggle-icon{ transform:rotate(45deg); }
-
   .contact-band{
     background: linear-gradient(135deg, var(--asphalt-2), var(--asphalt-3));
     border: 1px solid var(--line); border-radius: 12px; padding: 40px 32px; text-align:center;
@@ -190,7 +180,6 @@
     background: var(--chrome); border-radius:5px; padding: 10px 16px; display:inline-block;
     letter-spacing:0.08em; white-space:nowrap; margin-top:20px;
   }
-
   footer{
     border-top:1px solid var(--line);
     padding: 48px 0 32px;
@@ -248,16 +237,13 @@
   </div>
 </nav>
 <div class="rev-strip"></div>
-
 <header class="top wrap">
   <div class="eyebrow">FAQs</div>
   <h1>Common questions</h1>
   <p>Everything most people ask before booking a shoot. Can't find your answer? Just get in touch.</p>
 </header>
-
 <section class="section">
   <div class="wrap">
-
   <div class="toggle-block" onclick="toggleFAQBlock(this)">
     <div class="toggle-head">How do I book a shoot? <span class="toggle-icon">+</span></div>
     <div class="toggle-body"><div class="toggle-body-inner">Send an email through the "Get in touch" button with your car, what you're after (car meet coverage, a private shoot, or listing photos), and roughly when and where. You'll hear back to lock in a time.</div></div>
@@ -280,11 +266,10 @@
   </div>
   <div class="toggle-block" onclick="toggleFAQBlock(this)">
     <div class="toggle-head">Do you do dealership work? <span class="toggle-icon">+</span></div>
-    <div class="toggle-body"><div class="toggle-body-inner">Yes — clean, consistent content for dealership listings is one of the core services. Get in touch to talk about ongoing or one-off dealership shoots.</div></div>
+    <div class="toggle-body"><div class="toggle-body-inner">Yes — dealership listings are welcome. Consistent framing and lighting across the whole lot, so every car looks like it belongs together. Get in touch to set it up.</div></div>
   </div>
-     </div> 
+     </div>
 </section>
-
 <footer>
   <div class="wrap">
     <div class="footer-grid">
@@ -335,7 +320,6 @@
       closeMobileMenu();
     }
   }, { passive: true });
-
 </script>
 <script>
   function toggleFAQBlock(el){
@@ -344,7 +328,6 @@
     document.querySelectorAll('.toggle-block.is-open').forEach(block => block.classList.remove('is-open'));
     if (!isOpen) el.classList.add('is-open');
   }
-
 </script>
 </body>
 </html>
