@@ -383,18 +383,19 @@ footer{
   [data-reveal-group]{ perspective: 1200px; }
   [data-reveal], [data-reveal-group] > *{
     opacity:0;
-    transition: opacity .85s cubic-bezier(.22,1,.36,1), transform .85s cubic-bezier(.22,1,.36,1), box-shadow .85s ease;
+    transition: opacity .6s cubic-bezier(.22,1,.36,1), transform .6s cubic-bezier(.22,1,.36,1), box-shadow .6s ease;
     will-change: transform, opacity, box-shadow;
   }
-  [data-reveal]{ transform: translateY(50px) translateZ(-120px) rotateX(18deg) scale(.94); }
+  [data-reveal]{ transform: translateY(28px) translateZ(-60px) rotateX(9deg) scale(.97); }
   [data-reveal].is-visible{ opacity:1; transform: translateY(0) translateZ(0) rotateX(0) scale(1); }
 
-  [data-reveal-group] > *:nth-child(6n+1){ transform: translateZ(-90px) rotateX(20deg) scale(.86); box-shadow: 0 0 0 rgba(0,0,0,0); }
-  [data-reveal-group] > *:nth-child(6n+2){ transform: translateX(-46px) translateZ(-70px) rotateY(-32deg); }
-  [data-reveal-group] > *:nth-child(6n+3){ transform: translateX(46px) translateZ(-70px) rotateY(32deg); }
-  [data-reveal-group] > *:nth-child(6n+4){ transform: translateY(48px) translateZ(-80px) rotateX(-26deg) scale(.92); }
-  [data-reveal-group] > *:nth-child(6n+5){ transform: translateZ(-60px) rotateX(-16deg) scale(1.08); }
-  [data-reveal-group] > *:nth-child(6n+6){ transform: translateY(-40px) translateZ(-70px) rotateY(20deg); }
+  /* Same 3D entrance, kept subtle: about half the original angles and distances */
+  [data-reveal-group] > *:nth-child(6n+1){ transform: translateZ(-45px) rotateX(10deg) scale(.94); box-shadow: 0 0 0 rgba(0,0,0,0); }
+  [data-reveal-group] > *:nth-child(6n+2){ transform: translateX(-22px) translateZ(-35px) rotateY(-14deg); }
+  [data-reveal-group] > *:nth-child(6n+3){ transform: translateX(22px) translateZ(-35px) rotateY(14deg); }
+  [data-reveal-group] > *:nth-child(6n+4){ transform: translateY(24px) translateZ(-40px) rotateX(-12deg) scale(.96); }
+  [data-reveal-group] > *:nth-child(6n+5){ transform: translateZ(-30px) rotateX(-8deg) scale(1.03); }
+  [data-reveal-group] > *:nth-child(6n+6){ transform: translateY(-20px) translateZ(-35px) rotateY(10deg); }
 
   [data-reveal-group].is-visible > *{
     opacity:1;
@@ -402,11 +403,11 @@ footer{
     box-shadow: 0 24px 48px -20px rgba(0,0,0,0.55);
   }
   [data-reveal-group].is-visible > *:nth-child(1){ transition-delay:.05s; }
-  [data-reveal-group].is-visible > *:nth-child(2){ transition-delay:.12s; }
-  [data-reveal-group].is-visible > *:nth-child(3){ transition-delay:.19s; }
-  [data-reveal-group].is-visible > *:nth-child(4){ transition-delay:.26s; }
-  [data-reveal-group].is-visible > *:nth-child(5){ transition-delay:.33s; }
-  [data-reveal-group].is-visible > *:nth-child(6){ transition-delay:.40s; }
+  [data-reveal-group].is-visible > *:nth-child(2){ transition-delay:.09s; }
+  [data-reveal-group].is-visible > *:nth-child(3){ transition-delay:.13s; }
+  [data-reveal-group].is-visible > *:nth-child(4){ transition-delay:.17s; }
+  [data-reveal-group].is-visible > *:nth-child(5){ transition-delay:.21s; }
+  [data-reveal-group].is-visible > *:nth-child(6){ transition-delay:.25s; }
 
   @media (prefers-reduced-motion: reduce){
     [data-reveal], [data-reveal-group] > *{opacity:1 !important; transform:none !important; transition:none !important; box-shadow:none !important;}
@@ -557,6 +558,30 @@ footer{
   .page.active{ display:block; }
   #page-booking .wrap{ max-width:720px; }
 
+</style>
+<style>
+  /* Shared polish (same block on every page) */
+  /* Visible focus ring for keyboard users; mouse and touch clicks don't show it */
+  :focus-visible{ outline:2px solid #D4A537; outline-offset:3px; }
+  /* Buttons dip slightly when pressed so a tap feels heard */
+  .btn, .btn-primary, .btn-secondary, .nav-cta, .instagram-follow-btn, .share-btn, .toast-undo-btn{
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active, .btn-primary:active, .btn-secondary:active, .nav-cta:active,
+  .instagram-follow-btn:active, .share-btn:active, .toast-undo-btn:active{
+    transform:scale(0.97);
+  }
+  /* Phones have no hover: without this, a tapped photo stays lifted and zoomed */
+  @media (hover: none){
+    .frame:hover, .album:hover, .btn-primary:hover, .btn-secondary:hover{ transform:none; }
+    .frame:hover img, .photo-grid .frame:hover img{ transform:none; }
+  }
+  /* Less motion when the device asks for it: no looping animations or hover
+     movement. Colour and fade changes stay, since they help show state. */
+  @media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{ animation-duration:.01ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; }
+    .frame:hover, .album:hover, .btn-primary:hover, .btn-secondary:hover, .frame:hover img{ transform:none !important; }
+  }
 </style>
 </head>
 <body>
@@ -815,6 +840,8 @@ function mobileNavGo(e, targetId){
     var track = document.querySelector('.tagline-track');
     var strip = document.querySelector('.rev-strip');
     if(!track) return;
+    // People who've asked their device for less motion get a still strip.
+    if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     track.innerHTML = track.innerHTML + track.innerHTML;
 
@@ -1166,7 +1193,7 @@ function mobileNavGo(e, targetId){
       // escape them before they go into HTML.
       const esc = str => String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
       gallery.innerHTML = featured.map(p => `
-        <a class="frame" href="${esc(p.href)}"><img src="${esc(p.url)}" alt="${esc(p.alt)}" onerror="this.style.visibility='hidden'"></a>
+        <a class="frame" href="${esc(p.href)}"><img src="${esc(p.url)}" alt="${esc(p.alt)}" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'"></a>
       `).join('');
     })
     .catch(e => console.error('Could not load featured photos:', e));
