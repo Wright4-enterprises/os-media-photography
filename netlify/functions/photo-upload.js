@@ -1,21 +1,14 @@
 import { getStore } from '@netlify/blobs';
+import { requireAdmin } from '../lib/auth.js';
 
 export default async (req, context) => {
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
   }
 
-  const authHeader = req.headers.get('authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return new Response('Unauthorized - please log in.', { status: 401 });
-  }
-  const token = authHeader.split(' ')[1];
-
-  try {
-    JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-  } catch (e) {
-    return new Response('Unauthorized - invalid token.', { status: 401 });
-  }
+  // Only a logged-in Netlify Identity user (i.e. Owen) can do this.
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   let body;
   try {

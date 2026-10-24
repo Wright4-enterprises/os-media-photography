@@ -253,7 +253,7 @@
   <div class="lb-counter" id="lbCounter"></div>
 </div>
 
-<footer>OS Media — Owen Smith · Perth, WA</footer>
+<footer>OS Media — Owen Smith · ABN 49 778 330 676 · Perth, WA</footer>
 
 <script>
   let allShoots = [];
@@ -289,9 +289,21 @@
     }catch(e){
       console.warn('Could not load dynamic shoots:', e);
     }
-    allShoots = dynamicShoots.filter(s => !s.hidden && !s.archived);
+    // A shoot with every photo deleted has nothing to show, so keep it off
+    // the public gallery rather than showing a broken cover and an empty page.
+    allShoots = dynamicShoots.filter(s => !s.hidden && !s.archived && s.photos && s.photos.length > 0);
     renderAlbums();
   }
+
+  // Shoot titles are typed by Owen and can contain quotes or < >, so escape
+  // them before they go into HTML.
+  function esc(str){
+    return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // If a photo file is missing, show the empty tile background instead of the
+  // browser's broken-image icon.
+  function hideBroken(img){ img.style.visibility = 'hidden'; }
 
   function renderAlbums(){
     const grid = document.getElementById('albumsGrid');
@@ -300,11 +312,11 @@
       return;
     }
     grid.innerHTML = allShoots.map(shoot => `
-      <div class="album" onclick="openShoot('${shoot.id}')">
-        <div class="album-cover"><img src="${shoot.coverPhoto ? '/.netlify/functions/photo?key=' + encodeURIComponent(shoot.coverPhoto) : shoot.photos[0]}" alt="${shoot.title}" loading="lazy"></div>
+      <div class="album" onclick="openShoot('${esc(shoot.id)}')">
+        <div class="album-cover"><img src="${esc(shoot.coverPhoto ? '/.netlify/functions/photo?key=' + encodeURIComponent(shoot.coverPhoto) : shoot.photos[0])}" alt="${esc(shoot.title)}" loading="lazy" onerror="hideBroken(this)"></div>
         <div class="album-meta">
-          <div class="album-title">${shoot.title}</div>
-          <div class="album-info">${shoot.date} · ${shoot.photos.length} photo${shoot.photos.length === 1 ? '' : 's'}</div>
+          <div class="album-title">${esc(shoot.title)}</div>
+          <div class="album-info">${[shoot.date, shoot.photos.length + ' photo' + (shoot.photos.length === 1 ? '' : 's')].filter(Boolean).map(esc).join(' · ')}</div>
         </div>
       </div>
     `).join('');
@@ -314,11 +326,11 @@
     const shoot = allShoots.find(s => s.id === id);
     if(!shoot) return;
     document.getElementById('shootTitle').textContent = shoot.title;
-    document.getElementById('shootDate').textContent = shoot.date;
+    document.getElementById('shootDate').textContent = shoot.date || '';
     document.getElementById('shareBtnText').innerHTML = '&#128279; Share this shoot';
     document.getElementById('shareBtn').classList.remove('copied');
     document.getElementById('shootGrid').innerHTML = shoot.photos.map((src, i) => `
-      <div class="frame" onclick="openLightbox('${id}', ${i})"><img src="${src}" alt="${shoot.title}" loading="lazy"></div>
+      <div class="frame" onclick="openLightbox('${esc(id)}', ${i})"><img src="${esc(src)}" alt="${esc(shoot.title)}" loading="lazy" onerror="hideBroken(this)"></div>
     `).join('');
     document.getElementById('albumsView').classList.add('hidden');
     document.getElementById('shootView').classList.add('active');

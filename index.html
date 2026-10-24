@@ -710,7 +710,7 @@ footer{
       </div>
     </div>
     <div class="footer-bottom">
-      <div>&copy; 2026 OS Media — Owen Smith</div>
+      <div>&copy; 2026 OS Media — Owen Smith · ABN 49 778 330 676</div>
       <div>Perth, WA</div>
     </div>
   </div>
@@ -750,7 +750,7 @@ footer{
 
 </div>
 
-<footer>OS Media — Owen Smith · Perth, WA</footer>
+<footer>OS Media — Owen Smith · ABN 49 778 330 676 · Perth, WA</footer>
 </div>
 
 <script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js"></script>
@@ -1162,8 +1162,11 @@ function mobileNavGo(e, targetId){
         return;
       }
 
+      // Shoot titles are typed by Owen and can contain quotes or < >, so
+      // escape them before they go into HTML.
+      const esc = str => String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
       gallery.innerHTML = featured.map(p => `
-        <a class="frame" href="${p.href}"><img src="${p.url}" alt="${p.alt}"></a>
+        <a class="frame" href="${esc(p.href)}"><img src="${esc(p.url)}" alt="${esc(p.alt)}" onerror="this.style.visibility='hidden'"></a>
       `).join('');
     })
     .catch(e => console.error('Could not load featured photos:', e));
