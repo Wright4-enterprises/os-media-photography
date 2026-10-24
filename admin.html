@@ -454,7 +454,7 @@
       <span id="profileGreeting"></span>
       <div class="user-row-actions">
         <button class="profile-btn" onclick="openProfile()">Profile</button>
-        <button onclick="netlifyIdentity.logout()">Log out</button>
+        <button onclick="logOut()">Log out</button>
       </div>
     </div>
 
@@ -628,11 +628,33 @@
   async function loadShoots() {
     const res = await fetch('/.netlify/functions/shoots-list?t=' + Date.now());
     const data = await res.json();
-    allShoots = data.shoots;
+    // A shoot whose delete is still waiting out its undo window stays hidden,
+    // even if something reloads the list in the meantime.
+    allShoots = data.shoots.filter(s => !pendingDeleteIds.has(s.id));
     renderShootsGrid();
   }
 
   /* ---------- Toast / Undo system ---------- */
+
+  // Changes with an Undo toast only reach the server when the toast runs out.
+  // Keep track of them so they can be sent straight away if the page is about
+  // to go away (tab hidden, phone locked, logging out) instead of being lost.
+  const pendingDeleteIds = new Set();
+  const pendingActions = new Map();
+
+  function flushPendingActions() {
+    const runs = [...pendingActions.entries()].map(([toastId, action]) => {
+      clearTimeout(action.timeoutId);
+      pendingActions.delete(toastId);
+      removeToast(toastId);
+      return action.onExpire();
+    });
+    return Promise.allSettled(runs);
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushPendingActions();
+  });
 
   function showUndoToast(message, onUndo, onExpire, seconds = 5) {
     const stack = document.getElementById('toastStack');
@@ -649,12 +671,15 @@
     stack.appendChild(toast);
 
     const timeoutId = setTimeout(() => {
+      pendingActions.delete(toastId);
       removeToast(toastId);
       onExpire();
     }, seconds * 1000);
+    pendingActions.set(toastId, { timeoutId, onExpire });
 
     toast.querySelector('.toast-undo-btn').addEventListener('click', () => {
       clearTimeout(timeoutId);
+      pendingActions.delete(toastId);
       removeToast(toastId);
       onUndo();
     });
@@ -741,29 +766,51 @@
     }
   }
 
+  // Sends shoot deletes and reports any that failed, so a shoot never just
+  // quietly comes back. keepalive lets the request finish if the page closes.
+  async function sendShootDeletes(ids) {
+    const failed = [];
+    try {
+      const headers = await getAuthHeader();
+      for (const id of ids) {
+        try {
+          const res = await fetch('/.netlify/functions/shoots-delete', {
+            method: 'POST',
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ shootId: id }),
+            keepalive: true
+          });
+          // 404 means it's already gone, which is what we wanted.
+          if (!res.ok && res.status !== 404) failed.push(await res.text().catch(() => 'Server returned ' + res.status));
+        } catch (e) {
+          failed.push('Could not reach the server.');
+        }
+      }
+    } catch (e) {
+      failed.push('You were logged out before it could save.');
+    }
+    ids.forEach(id => pendingDeleteIds.delete(id));
+    if (failed.length) {
+      alert(`${failed.length} of ${ids.length} delete(s) did NOT save, so the shoot will still show.\n\n${failed[0]}`);
+      if (netlifyIdentity.currentUser()) loadShoots();
+    }
+  }
+
   function bulkDelete() {
     if (selectedIds.size === 0) return;
     const ids = [...selectedIds];
     const count = ids.length;
 
     // Optimistically remove from view
+    ids.forEach(id => pendingDeleteIds.add(id));
     allShoots = allShoots.filter(s => !ids.includes(s.id));
     renderShootsGrid();
     toggleSelectMode();
 
     showUndoToast(
       `${count} shoot${count === 1 ? '' : 's'} deleted.`,
-      () => { loadShoots(); }, // Undo: just reload from server (nothing was sent yet)
-      async () => {
-        const headers = await getAuthHeader();
-        for (const id of ids) {
-          await fetch('/.netlify/functions/shoots-delete', {
-            method: 'POST',
-            headers: { ...headers, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ shootId: id })
-          });
-        }
-      }
+      () => { ids.forEach(id => pendingDeleteIds.delete(id)); loadShoots(); }, // Undo: just reload from server (nothing was sent yet)
+      () => sendShootDeletes(ids)
     );
   }
 
@@ -991,7 +1038,8 @@
         const res = await fetch('/.netlify/functions/shoots-update', {
           method: 'POST',
           headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ shootId, deletePhotoKey: key })
+          body: JSON.stringify({ shootId, deletePhotoKey: key }),
+          keepalive: true
         });
         if (!res.ok) {
           const errText = await res.text().catch(() => '');
@@ -1147,20 +1195,14 @@
     const title = shoot.title;
 
     closeEditShoot();
+    pendingDeleteIds.add(id);
     allShoots = allShoots.filter(s => s.id !== id);
     renderShootsGrid();
 
     showUndoToast(
       `"${title}" deleted.`,
-      () => { loadShoots(); },
-      async () => {
-        const headers = await getAuthHeader();
-        await fetch('/.netlify/functions/shoots-delete', {
-          method: 'POST',
-          headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ shootId: id })
-        });
-      }
+      () => { pendingDeleteIds.delete(id); loadShoots(); },
+      () => sendShootDeletes([id])
     );
   }
 
@@ -1171,12 +1213,17 @@
   const INACTIVITY_LIMIT_MINUTES = 1;
   let inactivityTimer = null;
 
+  // Send any changes still waiting on their Undo toast before logging out,
+  // otherwise they'd have no login to send with and be lost.
+  async function logOut() {
+    await flushPendingActions();
+    netlifyIdentity.logout();
+  }
+
   function resetInactivityTimer() {
     if (!netlifyIdentity.currentUser()) return;
     clearTimeout(inactivityTimer);
-    inactivityTimer = setTimeout(() => {
-      netlifyIdentity.logout();
-    }, INACTIVITY_LIMIT_MINUTES * 60 * 1000);
+    inactivityTimer = setTimeout(logOut, INACTIVITY_LIMIT_MINUTES * 60 * 1000);
   }
 
   ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(evt => {
