@@ -437,6 +437,36 @@
     cursor:pointer; padding:0 2px; flex-shrink:0; font-family:'Inter', sans-serif;
   }
   .toast-close-btn:hover{ color:var(--amber); }
+
+  /* Move-photo arrows: only on touch screens, where drag-to-reorder doesn't
+     work (iPhone and Android don't support this kind of dragging). */
+  .move-btns{ display:none; gap:6px; }
+  .move-btns button{
+    flex:1; background:var(--asphalt-2); border:1px solid var(--line); border-radius:5px;
+    color:var(--chrome); font-size:18px; line-height:1; padding:0; cursor:pointer; font-family:'Inter', sans-serif;
+  }
+  .move-btns button:disabled{ opacity:0.3; cursor:default; }
+  .hint-touch{ display:none; }
+
+  /* Phones and tablets: bigger tap targets (Apple's minimum is 44px) and
+     16px text in inputs, which stops iPhone zooming in on every tap. */
+  @media (pointer: coarse){
+    input[type=text], input[type=date], input[type=email], input[type=password], select{ font-size:16px; }
+    .user-row button{ min-height:44px; padding:0 6px; }
+    .select-mode-btn{ min-height:44px; }
+    .btn-small{ min-height:44px; padding:10px 16px; font-size:13px; }
+    .toast-close-btn{ min-width:44px; min-height:44px; }
+    .cover-star-btn{ width:40px; height:40px; font-size:18px; }
+    .edit-photo-card{ cursor:default; }
+    .edit-photo-controls-row{ gap:4px; }
+    .edit-photo-controls-row label{ min-height:44px; font-size:13px; }
+    .edit-photo-controls-row input[type=checkbox]{ width:20px; height:20px; }
+    .edit-photo-controls-row .del-btn{ min-height:44px; font-size:13px; }
+    .move-btns{ display:flex; }
+    .move-btns button{ min-height:44px; }
+    .hint-mouse{ display:none; }
+    .hint-touch{ display:inline; }
+  }
 </style>
 <style>
   /* Shared polish (same block on every page) */
@@ -534,7 +564,7 @@
         <input type="date" id="editDate">
 
         <label>Photos</label>
-        <div class="edit-photo-hint">Drag a photo to reorder. Pick a cover, tick homepage photos, or delete.</div>
+        <div class="edit-photo-hint"><span class="hint-mouse">Drag a photo to reorder.</span><span class="hint-touch">Use the arrows to reorder.</span> Pick a cover, tick homepage photos, or delete. Then Save changes.</div>
         <div class="edit-photo-grid" id="editPhotoList" ondragover="handleGridDragOver(event)"></div>
 
         <label for="editAddPhotos">Add more photos</label>
@@ -948,7 +978,8 @@
 
   function renderEditPhotoList(shoot) {
     const list = document.getElementById('editPhotoList');
-    list.innerHTML = shoot.photoKeys.map((key) => `
+    const last = shoot.photoKeys.length - 1;
+    list.innerHTML = shoot.photoKeys.map((key, i) => `
       <div class="edit-photo-card"
            draggable="true"
            data-key="${esc(key)}"
@@ -966,6 +997,10 @@
             <input type="checkbox" ${(shoot.featuredPhotos || []).includes(key) ? 'checked' : ''} onclick="toggleEditFeatured('${key}', this.checked)" />
             Homepage
           </label>
+          <div class="move-btns">
+            <button type="button" aria-label="Move photo earlier" onclick="movePhoto('${key}', -1)" ${i === 0 ? 'disabled' : ''}>&#8249;</button>
+            <button type="button" aria-label="Move photo later" onclick="movePhoto('${key}', 1)" ${i === last ? 'disabled' : ''}>&#8250;</button>
+          </div>
           <button class="del-btn" onclick="deletePhotoFromEdit('${key}')">Delete photo</button>
         </div>
       </div>
@@ -1052,6 +1087,19 @@
 
     const shoot = allShoots.find(s => s.id === editingShootId);
     shoot.photoKeys = [...container.querySelectorAll('.edit-photo-card')].map(card => card.dataset.key);
+  }
+
+  // Touch-screen alternative to dragging: swap a photo with its neighbour.
+  // Like dragging, the new order is saved with "Save changes".
+  function movePhoto(key, dir) {
+    const shoot = allShoots.find(s => s.id === editingShootId);
+    const from = shoot.photoKeys.indexOf(key);
+    const to = from + dir;
+    if (from === -1 || to < 0 || to >= shoot.photoKeys.length) return;
+    [shoot.photoKeys[from], shoot.photoKeys[to]] = [shoot.photoKeys[to], shoot.photoKeys[from]];
+    renderEditPhotoList(shoot);
+    const moved = document.querySelector(`#editPhotoList .edit-photo-card[data-key="${CSS.escape(key)}"] .move-btns button:not(:disabled)`);
+    if (moved) moved.focus();
   }
 
   function setEditCover(key) {
