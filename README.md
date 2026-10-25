@@ -44,9 +44,36 @@ redeploys the live site — no more dragging files onto Netlify.
 - `admin.html` — where Owen adds new shoots (no coding, just a form)
 - `netlify/functions/` — the backend: stores photos, keeps the list of
   shoots, and serves images back to the gallery page
-- `images/` — the 6 original photos, shown as the "Portfolio Highlights"
-  album so nothing from before is lost
+- `netlify/lib/` — shared code for the functions: the login check
+  (`auth.js`), safe saving of the shoot list (`manifest.js`) and clearing
+  deleted photos from the CDN (`cache.js`)
+- `scripts/backup-photos.mjs` — downloads every photo to your computer
 
 Whenever Owen adds a shoot through the admin page, it's saved permanently
 (via Netlify Blobs) and shows up on the gallery automatically — nothing
 about the code ever needs to change for a new shoot.
+
+## Admin access
+Only accounts invited under **Identity → Users** can log in. To lock the admin
+page to specific accounts as well, set the environment variable
+`ADMIN_EMAILS` (Project configuration → Environment variables) to a
+comma-separated list, e.g. `osmedia1@outlook.com, oscar@wright4.com.au`.
+It takes effect on the next deploy. Keep **Registration** set to
+**Invite only**.
+
+## Backups
+The photos only live in Netlify Blobs, so take a copy now and then:
+
+```
+npm install
+NETLIFY_SITE_ID=<site id> NETLIFY_AUTH_TOKEN=<token> node scripts/backup-photos.mjs
+```
+
+The site ID is under Project configuration → General; make a personal access
+token under User settings → Applications. Files are saved to `backups/<date>/`
+(ignored by git).
+
+## If a deploy breaks the site
+Netlify keeps every deploy. Go to **Deploys**, open the last good one and
+click **Publish deploy** to roll back instantly, then fix the code and push
+again.

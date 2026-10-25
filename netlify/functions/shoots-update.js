@@ -1,5 +1,7 @@
 import { getStore } from '@netlify/blobs';
 import { requireAdmin } from '../lib/auth.js';
+import { updateManifest, checkTitle, checkDate } from '../lib/manifest.js';
+import { forgetPhotos } from '../lib/cache.js';
 
 export default async (req, context) => {
   if (req.method !== 'POST') {
@@ -17,32 +19,23 @@ export default async (req, context) => {
     return new Response('Invalid request body.', { status: 400 });
   }
 
- const { shootId, title, date, coverPhoto, featuredPhotos, photoKeys, deletePhotoKey, hidden, archived } = body;
+  const { shootId, title, date, coverPhoto, featuredPhotos, photoKeys, deletePhotoKey, hidden, archived } = body;
 
   if (!shootId) {
     return new Response('A shootId is required.', { status: 400 });
   }
+  const invalid = (title !== undefined && checkTitle(title)) || checkDate(date);
+  if (invalid) {
+    return new Response(invalid, { status: 400 });
+  }
 
   const shootsStore = getStore('shoots', { consistency: 'strong' });
 
-  if (deletePhotoKey) {
-    await shootsStore.delete(deletePhotoKey);
-  }
-
-  // Netlify Blobs has no built-in locking: two overlapping writes to the same
-  // manifest.json can silently clobber each other ("last write wins"). This
-  // shoot is only ever touched from the admin page, but this endpoint IS
-  // called from multiple UI actions (archive, hide, edit, photo-delete-undo)
-  // that can legitimately overlap in time. Guard with an optimistic-concurrency
-  // retry loop: read the manifest + its etag, apply the change, write back
-  // ONLY if nobody else wrote in the meantime (onlyIfMatch); if someone did,
-  // re-read the now-current manifest and re-apply our change on top of it.
+  // This shoot is only ever touched from the admin page, but this endpoint IS
+  // called from several UI actions (archive, hide, edit, photo delete) that
+  // can overlap in time, so the change is applied through updateManifest.
   let shoot;
-  const MAX_ATTEMPTS = 8;
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const { data: manifestRaw, etag } = await shootsStore.getWithMetadata('manifest.json');
-    const manifest = manifestRaw ? JSON.parse(manifestRaw) : [];
-
+  const { response } = await updateManifest(shootsStore, manifest => {
     const shootIndex = manifest.findIndex(s => s.id === shootId);
     if (shootIndex === -1) {
       return new Response('Shoot not found.', { status: 404 });
@@ -50,7 +43,7 @@ export default async (req, context) => {
 
     shoot = manifest[shootIndex];
 
-    if (title !== undefined) shoot.title = title;
+    if (title !== undefined) shoot.title = title.trim();
     if (date !== undefined) shoot.date = date;
     if (coverPhoto !== undefined) shoot.coverPhoto = coverPhoto;
     if (featuredPhotos !== undefined) shoot.featuredPhotos = featuredPhotos;
@@ -67,17 +60,14 @@ export default async (req, context) => {
         shoot.featuredPhotos = shoot.featuredPhotos.filter(k => k !== deletePhotoKey);
       }
     }
+  });
+  if (response) return response;
 
-    manifest[shootIndex] = shoot;
-
-    const writeOpts = etag ? { onlyIfMatch: etag } : { onlyIfNew: true };
-    const { modified } = await shootsStore.set('manifest.json', JSON.stringify(manifest), writeOpts);
-    if (modified) break;
-    // Someone else wrote manifest.json between our read and our write.
-    // Loop again: re-read the fresh manifest and re-apply this change on top of it.
-    if (attempt === MAX_ATTEMPTS - 1) {
-      return new Response('Could not save — too many conflicting updates happening at once. Please try again.', { status: 409 });
-    }
+  // Only remove the photo file once the manifest no longer points at it, so a
+  // failed save never leaves the gallery showing a missing photo.
+  if (deletePhotoKey) {
+    await shootsStore.delete(deletePhotoKey);
+    await forgetPhotos([deletePhotoKey]);
   }
 
   return new Response(JSON.stringify({ ok: true, shoot }), {

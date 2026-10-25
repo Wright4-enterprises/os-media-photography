@@ -99,7 +99,9 @@
   .album-cover{ aspect-ratio:4/3; overflow:hidden; background:var(--asphalt-3); }
   .album-cover img{ width:100%; height:100%; object-fit:cover; display:block; }
   .album-meta{ padding:16px 18px 20px; }
-  .album-title{ font-family:'Oswald', sans-serif; font-weight:600; font-size:19px; color:var(--white); text-transform:uppercase; letter-spacing:0.02em; }
+  .album-title{ font-family:'Oswald', sans-serif; font-weight:600; font-size:19px; color:var(--white); text-transform:uppercase; letter-spacing:0.02em;
+    /* Long meet names stop at 3 lines here; the full name shows on hover and on the shoot page */
+    display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
   .album-info{ font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--chrome-dim); margin-top:6px; }
 
   .empty-state{ text-align:center; padding:60px 20px; color:var(--chrome-dim); }
@@ -134,7 +136,7 @@
   #albumsView.hidden{ display:none; }
   .shoot-head{ padding:40px 0 24px; display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap; }
   .shoot-head-left{ flex:1; min-width:200px; }
-  .shoot-title{ font-family:'Oswald', sans-serif; font-weight:700; text-transform:uppercase; font-size:clamp(28px,4vw,42px); color:var(--white); margin:8px 0 4px; }
+  .shoot-title{ font-family:'Oswald', sans-serif; font-weight:700; text-transform:uppercase; font-size:clamp(28px,4vw,42px); color:var(--white); margin:8px 0 4px; overflow-wrap:anywhere; }
   .shoot-date{ font-family:'JetBrains Mono', monospace; font-size:13px; color:var(--chrome-dim); }
 
   .share-btn{
@@ -151,7 +153,7 @@
     gap:14px; padding:12px 0 80px;
   }
   .photo-grid .frame{
-    aspect-ratio:4/5; border-radius:6px; overflow:hidden; border:1px solid var(--line);
+    display:block; aspect-ratio:4/5; border-radius:6px; overflow:hidden; border:1px solid var(--line);
     background:var(--asphalt-2); cursor:pointer;
   }
   .photo-grid .frame img{
@@ -165,12 +167,14 @@
     position:fixed; inset:0; background:rgba(10,9,7,0.96); z-index:200;
     display:none; align-items:center; justify-content:center; padding:40px;
   }
-  #lightbox.active{ display:flex; }
+  #lightbox.active{ display:flex; animation:lbIn .2s cubic-bezier(.23,1,.32,1); }
+  @keyframes lbIn{ from{ opacity:0; } to{ opacity:1; } }
   #lightbox img{ max-width:100%; max-height:100%; border-radius:4px; box-shadow:0 30px 60px rgba(0,0,0,0.6); }
   .lb-close, .lb-prev, .lb-next{
     position:absolute; background:rgba(255,255,255,0.06); border:1px solid var(--line);
     color:var(--white); width:44px; height:44px; border-radius:50%;
     display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px;
+    font-family:inherit; padding:0; line-height:1;
     transition:background .2s ease;
   }
   .lb-close:hover, .lb-prev:hover, .lb-next:hover{ background:rgba(212,165,55,0.2); }
@@ -187,6 +191,30 @@
   footer{ text-align:center; padding:32px 0; color:var(--chrome-dim); font-family:'JetBrains Mono', monospace; font-size:12px; border-top:1px solid var(--line); }
 
   .loading{ text-align:center; padding:60px 20px; color:var(--chrome-dim); font-family:'JetBrains Mono', monospace; font-size:13px; }
+</style>
+<style>
+  /* Shared polish (same block on every page) */
+  /* Visible focus ring for keyboard users; mouse and touch clicks don't show it */
+  :focus-visible{ outline:2px solid #D4A537; outline-offset:3px; }
+  /* Buttons dip slightly when pressed so a tap feels heard */
+  .btn, .btn-primary, .btn-secondary, .nav-cta, .instagram-follow-btn, .share-btn, .toast-undo-btn{
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active, .btn-primary:active, .btn-secondary:active, .nav-cta:active,
+  .instagram-follow-btn:active, .share-btn:active, .toast-undo-btn:active{
+    transform:scale(0.97);
+  }
+  /* Phones have no hover: without this, a tapped photo stays lifted and zoomed */
+  @media (hover: none){
+    .frame:hover, .album:hover, .btn-primary:hover, .btn-secondary:hover{ transform:none; }
+    .frame:hover img, .photo-grid .frame:hover img{ transform:none; }
+  }
+  /* Less motion when the device asks for it: no looping animations or hover
+     movement. Colour and fade changes stay, since they help show state. */
+  @media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{ animation-duration:.01ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; }
+    .frame:hover, .album:hover, .btn-primary:hover, .btn-secondary:hover, .frame:hover img{ transform:none !important; }
+  }
 </style>
 </head>
 <body>
@@ -245,11 +273,11 @@
   </div>
 </div>
 
-<div id="lightbox">
-  <div class="lb-close" onclick="closeLightbox()">&times;</div>
-  <div class="lb-prev" onclick="navLightbox(-1)">&#8249;</div>
+<div id="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer">
+  <button type="button" class="lb-close" onclick="closeLightbox()" aria-label="Close">&times;</button>
+  <button type="button" class="lb-prev" onclick="navLightbox(-1)" aria-label="Previous photo">&#8249;</button>
   <img id="lightboxImg" src="" alt="">
-  <div class="lb-next" onclick="navLightbox(1)">&#8250;</div>
+  <button type="button" class="lb-next" onclick="navLightbox(1)" aria-label="Next photo">&#8250;</button>
   <div class="lb-counter" id="lbCounter"></div>
 </div>
 
@@ -305,6 +333,12 @@
   // browser's broken-image icon.
   function hideBroken(img){ img.style.visibility = 'hidden'; }
 
+  // "2026-09-06" -> "6 Sept 2026", the way people here read dates.
+  function formatDate(date){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return date || '';
+    return new Date(date + 'T00:00:00Z').toLocaleDateString('en-AU', { day:'numeric', month:'short', year:'numeric', timeZone:'UTC' });
+  }
+
   function renderAlbums(){
     const grid = document.getElementById('albumsGrid');
     if(allShoots.length === 0){
@@ -312,13 +346,13 @@
       return;
     }
     grid.innerHTML = allShoots.map(shoot => `
-      <div class="album" onclick="openShoot('${esc(shoot.id)}')">
+      <a class="album" href="?shoot=${esc(encodeURIComponent(shoot.id))}" onclick="event.preventDefault(); openShoot('${esc(shoot.id)}')">
         <div class="album-cover"><img src="${esc(shoot.coverPhoto ? '/.netlify/functions/photo?key=' + encodeURIComponent(shoot.coverPhoto) : shoot.photos[0])}" alt="${esc(shoot.title)}" loading="lazy" onerror="hideBroken(this)"></div>
         <div class="album-meta">
-          <div class="album-title">${esc(shoot.title)}</div>
-          <div class="album-info">${[shoot.date, shoot.photos.length + ' photo' + (shoot.photos.length === 1 ? '' : 's')].filter(Boolean).map(esc).join(' · ')}</div>
+          <div class="album-title" title="${esc(shoot.title)}">${esc(shoot.title)}</div>
+          <div class="album-info">${[formatDate(shoot.date), shoot.photos.length + ' photo' + (shoot.photos.length === 1 ? '' : 's')].filter(Boolean).map(esc).join(' · ')}</div>
         </div>
-      </div>
+      </a>
     `).join('');
   }
 
@@ -326,11 +360,11 @@
     const shoot = allShoots.find(s => s.id === id);
     if(!shoot) return;
     document.getElementById('shootTitle').textContent = shoot.title;
-    document.getElementById('shootDate').textContent = shoot.date || '';
+    document.getElementById('shootDate').textContent = formatDate(shoot.date);
     document.getElementById('shareBtnText').innerHTML = '&#128279; Share this shoot';
     document.getElementById('shareBtn').classList.remove('copied');
     document.getElementById('shootGrid').innerHTML = shoot.photos.map((src, i) => `
-      <div class="frame" onclick="openLightbox('${esc(id)}', ${i})"><img src="${esc(src)}" alt="${esc(shoot.title)}" loading="lazy" onerror="hideBroken(this)"></div>
+      <a class="frame" href="${esc(src)}" onclick="event.preventDefault(); openLightbox('${esc(id)}', ${i})"><img src="${esc(src)}" alt="${esc(shoot.title)}" loading="lazy" decoding="async" onerror="hideBroken(this)"></a>
     `).join('');
     document.getElementById('albumsView').classList.add('hidden');
     document.getElementById('shootView').classList.add('active');
@@ -373,12 +407,17 @@
     currentPhotos = shoot.photos;
     currentIndex = index;
     document.getElementById('lightboxImg').src = currentPhotos[currentIndex];
+    document.getElementById('lightboxImg').alt = shoot.title;
     document.getElementById('lbCounter').textContent = (currentIndex+1) + ' / ' + currentPhotos.length;
+    lightboxOpener = document.activeElement;
     document.getElementById('lightbox').classList.add('active');
+    document.querySelector('#lightbox .lb-close').focus();
   }
 
+  let lightboxOpener = null;
   function closeLightbox(){
     document.getElementById('lightbox').classList.remove('active');
+    if(lightboxOpener && lightboxOpener.focus) lightboxOpener.focus();
   }
 
   function navLightbox(dir){
@@ -417,6 +456,8 @@
   (function(){
     var track = document.querySelector('.tagline-track');
     if(!track) return;
+    // People who've asked their device for less motion get a still strip.
+    if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     track.innerHTML = track.innerHTML + track.innerHTML;
 

@@ -4,8 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin — OS Media</title>
+<meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+  // Invite and password-reset links arrive here as #invite_token=... or
+  // #recovery_token=... (the homepage forwards them). The login widget
+  // ignores the token if this browser is still logged in from before, so
+  // clear any old session first - neither link needs one.
+  if (/(?:^#|&)(invite_token|recovery_token)=/.test(location.hash)) {
+    try { localStorage.removeItem('gotrue.user'); } catch (e) {}
+  }
+</script>
 <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <script>
   // Reskin the Netlify Identity login widget to match the site.
@@ -420,10 +430,11 @@
   }
   .toast{ position:relative; overflow:hidden; padding-bottom:16px; }
   .toast-timer-fill{
-    height:100%; background:var(--amber); width:100%;
+    height:100%; background:var(--amber); width:100%; transform-origin:left;
     animation: toastShrink 5s linear forwards;
   }
-  @keyframes toastShrink{ from{ width:100%; } to{ width:0%; } }
+  /* scaleX instead of width: runs on the GPU instead of re-laying out every frame */
+  @keyframes toastShrink{ from{ transform:scaleX(1); } to{ transform:scaleX(0); } }
   .toast-undo-btn{
     background: var(--amber); color:var(--asphalt); border:none; border-radius:5px;
     padding:8px 16px; font-weight:600; font-size:12.5px; cursor:pointer; white-space:nowrap;
@@ -435,6 +446,60 @@
     cursor:pointer; padding:0 2px; flex-shrink:0; font-family:'Inter', sans-serif;
   }
   .toast-close-btn:hover{ color:var(--amber); }
+
+  /* Move-photo arrows: only on touch screens, where drag-to-reorder doesn't
+     work (iPhone and Android don't support this kind of dragging). */
+  .move-btns{ display:none; gap:6px; }
+  .move-btns button{
+    flex:1; background:var(--asphalt-2); border:1px solid var(--line); border-radius:5px;
+    color:var(--chrome); font-size:18px; line-height:1; padding:0; cursor:pointer; font-family:'Inter', sans-serif;
+  }
+  .move-btns button:disabled{ opacity:0.3; cursor:default; }
+  .hint-touch{ display:none; }
+
+  /* Phones and tablets: bigger tap targets (Apple's minimum is 44px) and
+     16px text in inputs, which stops iPhone zooming in on every tap. */
+  @media (pointer: coarse){
+    input[type=text], input[type=date], input[type=email], input[type=password], select{ font-size:16px; }
+    .user-row button{ min-height:44px; padding:0 6px; }
+    .select-mode-btn{ min-height:44px; }
+    .btn-small{ min-height:44px; padding:10px 16px; font-size:13px; }
+    .toast-close-btn{ min-width:44px; min-height:44px; }
+    .cover-star-btn{ width:40px; height:40px; font-size:18px; }
+    .edit-photo-card{ cursor:default; }
+    .edit-photo-controls-row{ gap:4px; }
+    .edit-photo-controls-row label{ min-height:44px; font-size:13px; }
+    .edit-photo-controls-row input[type=checkbox]{ width:20px; height:20px; }
+    .edit-photo-controls-row .del-btn{ min-height:44px; font-size:13px; }
+    .move-btns{ display:flex; }
+    .move-btns button{ min-height:44px; }
+    .hint-mouse{ display:none; }
+    .hint-touch{ display:inline; }
+  }
+</style>
+<style>
+  /* Shared polish (same block on every page) */
+  /* Visible focus ring for keyboard users; mouse and touch clicks don't show it */
+  :focus-visible{ outline:2px solid #D4A537; outline-offset:3px; }
+  /* Buttons dip slightly when pressed so a tap feels heard */
+  .btn, .btn-primary, .btn-secondary, .nav-cta, .instagram-follow-btn, .share-btn, .toast-undo-btn{
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active, .btn-primary:active, .btn-secondary:active, .nav-cta:active,
+  .instagram-follow-btn:active, .share-btn:active, .toast-undo-btn:active{
+    transform:scale(0.97);
+  }
+  /* Phones have no hover: without this, a tapped photo stays lifted and zoomed */
+  @media (hover: none){
+    .frame:hover, .album:hover, .btn-primary:hover, .btn-secondary:hover{ transform:none; }
+    .frame:hover img, .photo-grid .frame:hover img{ transform:none; }
+  }
+  /* Less motion when the device asks for it: no looping animations or hover
+     movement. Colour and fade changes stay, since they help show state. */
+  @media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{ animation-duration:.01ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; }
+    .frame:hover, .album:hover, .btn-primary:hover, .btn-secondary:hover, .frame:hover img{ transform:none !important; }
+  }
 </style>
 </head>
 <body>
@@ -444,7 +509,7 @@
 
   <div id="loginState">
     <div class="login-box">
-      <p style="margin-top:0;color:var(--chrome-dim);font-size:14px;">Log in to add a new shoot to the site.</p>
+      <p id="loginHint" style="margin-top:0;color:var(--chrome-dim);font-size:14px;">Log in to add a new shoot to the site.</p>
       <button class="btn" onclick="netlifyIdentity.open('login')">Log in</button>
     </div>
   </div>
@@ -460,7 +525,7 @@
 
     <div class="card">
       <label for="shootTitle">Shoot name</label>
-      <input type="text" id="shootTitle" placeholder="e.g. Rockingham Car Meet">
+      <input type="text" id="shootTitle" placeholder="e.g. Rockingham Car Meet" maxlength="100">
 
       <label for="shootDate">Date</label>
       <input type="date" id="shootDate">
@@ -502,18 +567,18 @@
 
       <div class="card">
         <label for="editTitle">Shoot name</label>
-        <input type="text" id="editTitle">
+        <input type="text" id="editTitle" maxlength="100">
 
         <label for="editDate">Date</label>
         <input type="date" id="editDate">
 
         <label>Photos</label>
-        <div class="edit-photo-hint">Drag a photo to reorder. Pick a cover, tick homepage photos, or delete.</div>
+        <div class="edit-photo-hint"><span class="hint-mouse">Drag a photo to reorder.</span><span class="hint-touch">Use the arrows to reorder.</span> Pick a cover, tick homepage photos, or delete. Then Save changes.</div>
         <div class="edit-photo-grid" id="editPhotoList" ondragover="handleGridDragOver(event)"></div>
 
         <label for="editAddPhotos">Add more photos</label>
         <input type="file" id="editAddPhotos" accept="image/*" multiple>
-        <button class="btn btn-secondary btn-small" style="margin-top:10px;" onclick="addPhotosToShoot()">Upload selected photos</button>
+        <button class="btn btn-secondary btn-small" style="margin-top:10px;" id="addPhotosBtn" onclick="addPhotosToShoot()">Upload selected photos</button>
         <div class="status" id="editAddStatus"></div>
 
         <div class="edit-actions">
@@ -589,10 +654,22 @@
   let selectedIds = new Set();
   let pendingDeletes = {}; // id -> { timeoutId, type: 'shoot'|'photo', shootId, photoKey }
 
+  // Invite / password-reset links: the widget opens its own "choose a
+  // password" box, which says nothing about what's going on, so explain it.
+  const tokenLink = location.hash.match(/(?:^#|&)(invite_token|recovery_token)=/);
+  if (tokenLink) {
+    document.getElementById('loginHint').textContent = tokenLink[1] === 'invite_token'
+      ? 'Welcome! Choose a password in the box that just opened to finish setting up your login.'
+      : 'Choose a new password in the box that just opened.';
+  }
+
   netlifyIdentity.on('init', user => {
     updateUI(user);
   });
   netlifyIdentity.on('login', user => {
+    // The token has been used, so take it out of the address bar (otherwise
+    // a refresh would try to use it again and show an error).
+    if (tokenLink) history.replaceState(null, '', location.pathname + location.search);
     updateUI(user);
     // The widget shows its own "Logged in as ..." confirmation panel right
     // after login - we already show our own toast for that, so dismiss the
@@ -634,6 +711,48 @@
     renderShootsGrid();
   }
 
+  // Shoot titles and names are typed by people and can contain quotes or < >,
+  // so escape them before they go into HTML.
+  function esc(str) {
+    return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // Uploads one resized photo. Each photo gets its own request (a function
+  // request is capped at about 6 MB) and a key that is never reused. If the
+  // connection drops or stalls, it waits and tries again (up to 3 times);
+  // re-sending the same key is safe because it just overwrites the same photo.
+  async function uploadPhoto(key, photo, headers) {
+    let lastError;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await new Promise(r => setTimeout(r, 1000 * 2 ** attempt));
+      try {
+        const res = await fetch('/.netlify/functions/photo-upload', {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key, photo }),
+          signal: AbortSignal.timeout ? AbortSignal.timeout(60000) : undefined
+        });
+        if (res.ok) return;
+        const errText = await res.text().catch(() => '');
+        // 4xx means the request itself is wrong (or the login expired) -
+        // retrying won't help, so stop and show the reason.
+        if (res.status < 500) throw Object.assign(new Error(errText || ('Server returned ' + res.status)), { final: true });
+        lastError = new Error(errText || ('Server returned ' + res.status));
+      } catch (e) {
+        if (e.final) throw e;
+        lastError = e.name === 'TimeoutError' ? new Error('the upload timed out') : e;
+      }
+    }
+    throw lastError;
+  }
+
+  // Today's date where Owen is, as YYYY-MM-DD. (valueAsDate = new Date() uses
+  // UTC, which in Perth is still "yesterday" until 8am.)
+  function localToday() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
   /* ---------- Toast / Undo system ---------- */
 
   // Changes with an Undo toast only reach the server when the toast runs out.
@@ -664,7 +783,7 @@
     toast.className = 'toast';
     toast.id = toastId;
     toast.innerHTML = `
-      <span class="toast-msg">${message}</span>
+      <span class="toast-msg">${esc(message)}</span>
       <button class="toast-undo-btn">Undo</button>
       <div class="toast-timer"><div class="toast-timer-fill" style="animation-duration:${seconds}s;"></div></div>
     `;
@@ -704,7 +823,7 @@
     toast.className = 'toast';
     toast.id = toastId;
     toast.innerHTML = `
-      <span class="toast-msg">${message}</span>
+      <span class="toast-msg">${esc(message)}</span>
       <button class="toast-close-btn" aria-label="Dismiss">&times;</button>
       <div class="toast-timer"><div class="toast-timer-fill" style="animation-duration:${seconds}s;"></div></div>
     `;
@@ -820,12 +939,12 @@
     if (shoot.archived) flags.push('Archived');
     const isSelected = selectedIds.has(shoot.id);
     return `
-      <div class="shoot-tile ${shoot.archived ? 'is-archived' : ''} ${isSelected ? 'is-selected' : ''}" data-id="${shoot.id}" onclick="${selectMode ? `event.stopPropagation();document.getElementById('cb-${shoot.id}').click();` : `openEditShoot('${shoot.id}')`}">
-        ${selectMode ? `<input type="checkbox" class="select-checkbox" id="cb-${shoot.id}" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleSelect('${shoot.id}', this.checked)" />` : `<div class="edit-icon">&#9998;</div>`}
-        <div class="shoot-tile-cover"><img src="${shoot.coverPhoto ? '/.netlify/functions/photo?key=' + encodeURIComponent(shoot.coverPhoto) : shoot.photos[0]}" alt="${shoot.title}"></div>
+      <div class="shoot-tile ${shoot.archived ? 'is-archived' : ''} ${isSelected ? 'is-selected' : ''}" data-id="${esc(shoot.id)}" onclick="${selectMode ? `event.stopPropagation();document.getElementById('cb-${esc(shoot.id)}').click();` : `openEditShoot('${esc(shoot.id)}')`}">
+        ${selectMode ? `<input type="checkbox" class="select-checkbox" id="cb-${esc(shoot.id)}" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleSelect('${esc(shoot.id)}', this.checked)" />` : `<div class="edit-icon">&#9998;</div>`}
+        <div class="shoot-tile-cover">${(shoot.coverPhoto || shoot.photos[0]) ? `<img src="${esc(shoot.coverPhoto ? '/.netlify/functions/photo?key=' + encodeURIComponent(shoot.coverPhoto) : shoot.photos[0])}" alt="${esc(shoot.title)}" loading="lazy">` : ''}</div>
         <div class="shoot-tile-meta">
-          <div class="shoot-tile-title">${shoot.title}</div>
-          <div class="shoot-tile-date">${shoot.date} &middot; ${shoot.photos.length} photo${shoot.photos.length === 1 ? '' : 's'}</div>
+          <div class="shoot-tile-title">${esc(shoot.title)}</div>
+          <div class="shoot-tile-date">${[shoot.date, shoot.photos.length + ' photo' + (shoot.photos.length === 1 ? '' : 's')].filter(Boolean).map(esc).join(' &middot; ')}</div>
           ${flags.length ? `<div class="shoot-tile-flags">${flags.join(' &middot; ')}</div>` : ''}
         </div>
       </div>
@@ -880,14 +999,15 @@
 
   function renderEditPhotoList(shoot) {
     const list = document.getElementById('editPhotoList');
-    list.innerHTML = shoot.photoKeys.map((key) => `
+    const last = shoot.photoKeys.length - 1;
+    list.innerHTML = shoot.photoKeys.map((key, i) => `
       <div class="edit-photo-card"
            draggable="true"
-           data-key="${key}"
+           data-key="${esc(key)}"
            ondragstart="handleDragStart(event)"
            ondragend="handleDragEnd(event)">
         <div class="edit-photo-thumb">
-          <img src="/.netlify/functions/photo?key=${encodeURIComponent(key)}" />
+          <img src="/.netlify/functions/photo?key=${encodeURIComponent(key)}" alt="" loading="lazy" />
           <button type="button"
                   class="cover-star-btn${key === shoot.coverPhoto ? ' is-cover' : ''}"
                   title="${key === shoot.coverPhoto ? 'Cover photo' : 'Set as cover photo'}"
@@ -898,6 +1018,10 @@
             <input type="checkbox" ${(shoot.featuredPhotos || []).includes(key) ? 'checked' : ''} onclick="toggleEditFeatured('${key}', this.checked)" />
             Homepage
           </label>
+          <div class="move-btns">
+            <button type="button" aria-label="Move photo earlier" onclick="movePhoto('${key}', -1)" ${i === 0 ? 'disabled' : ''}>&#8249;</button>
+            <button type="button" aria-label="Move photo later" onclick="movePhoto('${key}', 1)" ${i === last ? 'disabled' : ''}>&#8250;</button>
+          </div>
           <button class="del-btn" onclick="deletePhotoFromEdit('${key}')">Delete photo</button>
         </div>
       </div>
@@ -986,6 +1110,19 @@
     shoot.photoKeys = [...container.querySelectorAll('.edit-photo-card')].map(card => card.dataset.key);
   }
 
+  // Touch-screen alternative to dragging: swap a photo with its neighbour.
+  // Like dragging, the new order is saved with "Save changes".
+  function movePhoto(key, dir) {
+    const shoot = allShoots.find(s => s.id === editingShootId);
+    const from = shoot.photoKeys.indexOf(key);
+    const to = from + dir;
+    if (from === -1 || to < 0 || to >= shoot.photoKeys.length) return;
+    [shoot.photoKeys[from], shoot.photoKeys[to]] = [shoot.photoKeys[to], shoot.photoKeys[from]];
+    renderEditPhotoList(shoot);
+    const moved = document.querySelector(`#editPhotoList .edit-photo-card[data-key="${CSS.escape(key)}"] .move-btns button:not(:disabled)`);
+    if (moved) moved.focus();
+  }
+
   function setEditCover(key) {
     const shoot = allShoots.find(s => s.id === editingShootId);
     shoot.coverPhoto = key;
@@ -1065,20 +1202,34 @@
     }
 
     statusEl.className = 'status working';
+    const addBtn = document.getElementById('addPhotosBtn');
+    addBtn.disabled = true;
+    const shootId = editingShootId;
 
     try {
-      const newPhotos = [];
+      // Upload each photo on its own with a key that has never been used
+      // (the old "next number" keys could overwrite a photo after a delete),
+      // then attach them all to the shoot in one go.
+      const batch = Date.now();
+      const photoKeys = [];
       for (let i = 0; i < files.length; i++) {
         statusEl.textContent = `Processing photo ${i+1} of ${files.length}...`;
-        newPhotos.push(await resizeImage(files[i]));
+        const photo = await resizeImage(files[i]);
+        statusEl.textContent = `Uploading photo ${i+1} of ${files.length}...`;
+        const key = `${shootId}/${batch}-${i}.jpg`;
+        try {
+          await uploadPhoto(key, photo, await getAuthHeader());
+        } catch (e) {
+          throw new Error(`Photo ${i+1} failed: ` + e.message);
+        }
+        photoKeys.push(key);
       }
 
-      statusEl.textContent = 'Uploading...';
-      const headers = await getAuthHeader();
+      statusEl.textContent = 'Saving...';
       const res = await fetch('/.netlify/functions/shoots-add-photos', {
         method: 'POST',
-        headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shootId: editingShootId, photos: newPhotos })
+        headers: { ...(await getAuthHeader()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shootId, photoKeys })
       });
 
       if (!res.ok) {
@@ -1087,9 +1238,9 @@
       }
 
       const data = await res.json();
-      const shootIndex = allShoots.findIndex(s => s.id === editingShootId);
-      allShoots[shootIndex] = data.shoot;
-      renderEditPhotoList(data.shoot);
+      const shootIndex = allShoots.findIndex(s => s.id === shootId);
+      if (shootIndex !== -1) allShoots[shootIndex] = data.shoot;
+      if (editingShootId === shootId) renderEditPhotoList(data.shoot);
 
       statusEl.textContent = 'Photos added!';
       statusEl.className = 'status ok';
@@ -1098,6 +1249,8 @@
       console.error(err);
       statusEl.textContent = 'Something went wrong: ' + err.message;
       statusEl.className = 'status err';
+    } finally {
+      addBtn.disabled = false;
     }
   }
 
@@ -1473,7 +1626,7 @@
     }
   }
 
-  document.getElementById('shootDate').valueAsDate = new Date();
+  document.getElementById('shootDate').value = localToday();
 
   document.getElementById('shootPhotos').addEventListener('change', (e) => {
     const strip = document.getElementById('previewStrip');
@@ -1525,41 +1678,27 @@
         allPhotos.push(await resizeImage(files[i]));
       }
 
-      const user = netlifyIdentity.currentUser();
-      const token = await user.jwt();
-
       const slug = title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-      const tempShootId = `${slug}-${Date.now()}`;
+      const tempShootId = `${slug || 'shoot'}-${Date.now()}`;
       const photoKeys = [];
 
       for(let i = 0; i < allPhotos.length; i++){
         statusEl.textContent = `Uploading photo ${i+1} of ${allPhotos.length}...`;
         const key = `${tempShootId}/${i}.jpg`;
-
-        const uploadRes = await fetch('/.netlify/functions/photo-upload', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
-          },
-          body: JSON.stringify({ key, photo: allPhotos[i] })
-        });
-
-        if(!uploadRes.ok){
-          const errText = await uploadRes.text();
-          throw new Error(`Photo ${i+1} failed: ` + (errText || ('Server returned ' + uploadRes.status)));
+        try {
+          // Fetch the login token per photo: a big upload can outlast the
+          // hour-long token, and jwt() refreshes it when needed.
+          await uploadPhoto(key, allPhotos[i], await getAuthHeader());
+        } catch (e) {
+          throw new Error(`Photo ${i+1} failed: ` + e.message);
         }
-
         photoKeys.push(key);
       }
 
       statusEl.textContent = 'Finalizing shoot...';
       const finalizeRes = await fetch('/.netlify/functions/shoots-finalize', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
+        headers: { ...(await getAuthHeader()), 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, date, photoKeys })
       });
 

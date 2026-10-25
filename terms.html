@@ -222,6 +222,30 @@
   }
   ::selection{background: var(--amber); color: var(--asphalt);}
 </style>
+<style>
+  /* Shared polish (same block on every page) */
+  /* Visible focus ring for keyboard users; mouse and touch clicks don't show it */
+  :focus-visible{ outline:2px solid #D4A537; outline-offset:3px; }
+  /* Buttons dip slightly when pressed so a tap feels heard */
+  .btn, .btn-primary, .btn-secondary, .nav-cta, .instagram-follow-btn, .share-btn, .toast-undo-btn{
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active, .btn-primary:active, .btn-secondary:active, .nav-cta:active,
+  .instagram-follow-btn:active, .share-btn:active, .toast-undo-btn:active{
+    transform:scale(0.97);
+  }
+  /* Phones have no hover: without this, a tapped photo stays lifted and zoomed */
+  @media (hover: none){
+    .frame:hover, .album:hover, .btn-primary:hover, .btn-secondary:hover{ transform:none; }
+    .frame:hover img, .photo-grid .frame:hover img{ transform:none; }
+  }
+  /* Less motion when the device asks for it: no looping animations or hover
+     movement. Colour and fade changes stay, since they help show state. */
+  @media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{ animation-duration:.01ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; }
+    .frame:hover, .album:hover, .btn-primary:hover, .btn-secondary:hover, .frame:hover img{ transform:none !important; }
+  }
+</style>
 </head>
 <body>
 <nav>
@@ -332,7 +356,8 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <div>&copy; 2026 OS Media — Owen Smith · ABN 49 778 330 676</div>
+      <div>&copy; <span class="copy-year">2026</span> OS Media — Owen Smith · ABN 49 778 330 676</div>
+      <script>document.querySelectorAll('.copy-year').forEach(function(el){ el.textContent = new Date().getFullYear(); });</script>
       <div>Perth, WA</div>
     </div>
   </div>
