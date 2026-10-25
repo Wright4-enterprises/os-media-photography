@@ -213,6 +213,23 @@
   #loginState.active, #appState.active{ display:block; }
 
   .login-box{ text-align:center; padding:48px 24px; border:1px solid var(--line); border-radius:10px; background:var(--asphalt-2); }
+  /* The login form lives in the page itself (not Netlify's pop-up, which sits
+     in an iframe) so iPhone password AutoFill, paste and "Save password" work. */
+  .login-form{ max-width:340px; margin:0 auto; text-align:left; }
+  .login-form .btn{ width:100%; margin-top:22px; }
+  .pw-wrap{ position:relative; }
+  .pw-wrap input{ padding-right:64px; }
+  .pw-toggle{
+    position:absolute; right:6px; top:50%; transform:translateY(-50%);
+    background:none; border:none; color:var(--chrome-dim); cursor:pointer;
+    font-family:'Inter', sans-serif; font-size:12px; font-weight:600; padding:8px;
+  }
+  .pw-toggle:hover{ color:var(--amber); }
+  .link-btn{
+    background:none; border:none; padding:10px 0; margin-top:6px; cursor:pointer;
+    color:var(--chrome-dim); font-family:'Inter', sans-serif; font-size:13px; text-decoration:underline;
+  }
+  .link-btn:hover{ color:var(--amber); }
   .btn{
     display:inline-block; background:var(--amber); color:var(--asphalt); border:none;
     padding:13px 26px; border-radius:5px; font-weight:600; font-size:14px; cursor:pointer;
@@ -510,7 +527,18 @@
   <div id="loginState">
     <div class="login-box">
       <p id="loginHint" style="margin-top:0;color:var(--chrome-dim);font-size:14px;">Log in to add a new shoot to the site.</p>
-      <button class="btn" onclick="netlifyIdentity.open('login')">Log in</button>
+      <form class="login-form" id="loginForm">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" required>
+        <label for="loginPassword">Password</label>
+        <div class="pw-wrap">
+          <input type="password" id="loginPassword" name="password" autocomplete="current-password" required>
+          <button type="button" class="pw-toggle" id="loginPwToggle" aria-label="Show password">Show</button>
+        </div>
+        <button class="btn" type="submit" id="loginBtn">Log in</button>
+        <div class="status" id="loginStatus" role="status"></div>
+        <button type="button" class="link-btn" id="forgotBtn">Forgot password?</button>
+      </form>
     </div>
   </div>
 
@@ -650,6 +678,12 @@
   let allShoots = [];
   let editingShootId = null;
   let pendingDropTarget = null;
+  // Declared up here (not next to updateUI) because the login widget can fire
+  // its 'init' event while this script is still running - in Chrome it does
+  // so during netlifyIdentity.init() below - and updateUI reads this. Left
+  // further down, that crashed with "Cannot access before initialization"
+  // and the admin page stayed blank.
+  let loginToastShown = false;
   let selectMode = false;
   let selectedIds = new Set();
   let pendingDeletes = {}; // id -> { timeoutId, type: 'shoot'|'photo', shootId, photoKey }
@@ -695,6 +729,71 @@
     // when the widget's internals misbehave.
     console.error('netlifyIdentity.init() threw - continuing anyway:', e);
   }
+
+  /* ---------- Login form ----------
+     Logs in through the same Netlify Identity account system the widget uses
+     (netlifyIdentity.gotrue), then reloads: the widget picks up the saved
+     session on load and fires 'init' with the user, exactly as it does for
+     anyone already logged in. The reload is also what lets Safari offer to
+     save the password. Invite and password-reset links still use the
+     widget's own screens. */
+  function setLoginStatus(text, kind) {
+    const el = document.getElementById('loginStatus');
+    el.textContent = text;
+    el.className = 'status' + (kind ? ' ' + kind : '');
+  }
+
+  function loginErrorText(err) {
+    const detail = (err && err.json && (err.json.error_description || err.json.msg)) || (err && err.message) || '';
+    if (/password|grant|no user/i.test(detail)) return 'Wrong email or password.';
+    if (/fetch|network/i.test(detail)) return 'Could not reach the login server. Check your connection and try again.';
+    return detail || 'Could not log in. Please try again.';
+  }
+
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    if (!email || !password) { setLoginStatus('Enter your email and password.', 'err'); return; }
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true;
+    setLoginStatus('Logging in...', 'working');
+    try {
+      await netlifyIdentity.gotrue.login(email, password, true);
+      setLoginStatus('Logged in. Loading...', 'ok');
+      location.reload();
+    } catch (err) {
+      setLoginStatus(loginErrorText(err), 'err');
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('loginPwToggle').addEventListener('click', () => {
+    const input = document.getElementById('loginPassword');
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    const btn = document.getElementById('loginPwToggle');
+    btn.textContent = show ? 'Hide' : 'Show';
+    btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+  });
+
+  document.getElementById('forgotBtn').addEventListener('click', async () => {
+    const email = document.getElementById('loginEmail').value.trim();
+    if (!email) { setLoginStatus('Type your email above first, then tap Forgot password.', 'err'); return; }
+    setLoginStatus('Sending...', 'working');
+    try {
+      await netlifyIdentity.gotrue.requestPasswordRecovery(email);
+    } catch (err) {
+      // An unknown email gets the same message as a known one, so this
+      // can't be used to check which emails have a login. Only a failed
+      // connection is reported.
+      if (!(err && err.json) && /fetch|network/i.test((err && err.message) || '')) {
+        setLoginStatus('Could not reach the login server. Check your connection and try again.', 'err');
+        return;
+      }
+    }
+    setLoginStatus('If that email has a login, a password reset link is on its way.', 'ok');
+  });
 
   async function getAuthHeader() {
     const user = netlifyIdentity.currentUser();
@@ -1388,7 +1487,6 @@
 
 
 
-  let loginToastShown = false;
 
   function getDisplayName(user) {
     return (user && user.user_metadata && user.user_metadata.full_name) || (user && user.email) || '';

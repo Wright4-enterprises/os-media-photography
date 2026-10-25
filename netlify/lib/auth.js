@@ -5,6 +5,7 @@
 // ask this site's Identity service directly, which only answers with a user
 // if the token is real, unexpired and was signed by this site.
 // Returns null when the request is allowed, or a 401/403 Response to send back.
+// (See isAdmin below for who is allowed.)
 export async function requireAdmin(req) {
   const authHeader = req.headers.get('authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -31,14 +32,23 @@ export async function requireAdmin(req) {
     }
   }
 
-  // Optional extra lock: set ADMIN_EMAILS (comma separated) in the Netlify
-  // site settings to allow only those logins, even if someone else gets an
-  // Identity account on this site.
+  return isAdmin(user) ? null : new Response('Forbidden - this account is not an admin.', { status: 403 });
+}
+
+// Who counts as an admin:
+//  1. Anyone given the "admin" role in Netlify (Identity > Users > the user >
+//     Roles). Roles stay with the account even if its email changes, and
+//     only someone logged into Netlify can set them - users can't give
+//     themselves one.
+//  2. Anyone listed in the ADMIN_EMAILS environment variable (comma
+//     separated). This is the older way and still works so nothing breaks
+//     while moving to roles.
+// If ADMIN_EMAILS isn't set at all, only the "admin" role gets in.
+export function isAdmin(user) {
+  const roles = (user && user.app_metadata && user.app_metadata.roles) || [];
+  if (roles.some(r => String(r).trim().toLowerCase() === 'admin')) return true;
+
   const allowed = (process.env.ADMIN_EMAILS || '')
     .split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-  if (allowed.length && !allowed.includes(String(user.email || '').toLowerCase())) {
-    return new Response('Forbidden - this account is not an admin.', { status: 403 });
-  }
-
-  return null;
+  return allowed.includes(String((user && user.email) || '').toLowerCase());
 }
