@@ -1,6 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+  // Netlify's invite and password-reset emails link to the homepage
+  // (#invite_token=... / #recovery_token=...). Both are about logging into
+  // admin, so send them straight to the admin page, token and all, before
+  // anything else loads. Email-change links stay here: the homepage has the
+  // special handling those need.
+  if (/(?:^#|&)(invite_token|recovery_token)=/.test(location.hash)) {
+    location.replace('/admin.html' + location.hash);
+  }
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OS Media — Car Photography, Perth</title>

@@ -7,6 +7,15 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+  // Invite and password-reset links arrive here as #invite_token=... or
+  // #recovery_token=... (the homepage forwards them). The login widget
+  // ignores the token if this browser is still logged in from before, so
+  // clear any old session first - neither link needs one.
+  if (/(?:^#|&)(invite_token|recovery_token)=/.test(location.hash)) {
+    try { localStorage.removeItem('gotrue.user'); } catch (e) {}
+  }
+</script>
 <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <script>
   // Reskin the Netlify Identity login widget to match the site.
@@ -500,7 +509,7 @@
 
   <div id="loginState">
     <div class="login-box">
-      <p style="margin-top:0;color:var(--chrome-dim);font-size:14px;">Log in to add a new shoot to the site.</p>
+      <p id="loginHint" style="margin-top:0;color:var(--chrome-dim);font-size:14px;">Log in to add a new shoot to the site.</p>
       <button class="btn" onclick="netlifyIdentity.open('login')">Log in</button>
     </div>
   </div>
@@ -645,10 +654,22 @@
   let selectedIds = new Set();
   let pendingDeletes = {}; // id -> { timeoutId, type: 'shoot'|'photo', shootId, photoKey }
 
+  // Invite / password-reset links: the widget opens its own "choose a
+  // password" box, which says nothing about what's going on, so explain it.
+  const tokenLink = location.hash.match(/(?:^#|&)(invite_token|recovery_token)=/);
+  if (tokenLink) {
+    document.getElementById('loginHint').textContent = tokenLink[1] === 'invite_token'
+      ? 'Welcome! Choose a password in the box that just opened to finish setting up your login.'
+      : 'Choose a new password in the box that just opened.';
+  }
+
   netlifyIdentity.on('init', user => {
     updateUI(user);
   });
   netlifyIdentity.on('login', user => {
+    // The token has been used, so take it out of the address bar (otherwise
+    // a refresh would try to use it again and show an error).
+    if (tokenLink) history.replaceState(null, '', location.pathname + location.search);
     updateUI(user);
     // The widget shows its own "Logged in as ..." confirmation panel right
     // after login - we already show our own toast for that, so dismiss the
