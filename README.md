@@ -54,12 +54,18 @@ Whenever Owen adds a shoot through the admin page, it's saved permanently
 about the code ever needs to change for a new shoot.
 
 ## Admin access
-Only accounts invited under **Identity → Users** can log in. To lock the admin
-page to specific accounts as well, set the environment variable
-`ADMIN_EMAILS` (Project configuration → Environment variables) to a
-comma-separated list, e.g. `osmedia1@outlook.com, oscar@wright4.com.au`.
-It takes effect on the next deploy. Keep **Registration** set to
-**Invite only**.
+Only accounts invited under **Identity → Users** can log in, and only admins
+can add, edit or delete shoots. Keep **Registration** set to **Invite only**.
+
+An admin is anyone with the **admin** role: Identity → Users → click the user
+→ Roles → add `admin`. Roles stay with the account even if its email
+changes, and users can't give themselves one. After adding a role, log out
+and back in so the login picks it up.
+
+The older way, the `ADMIN_EMAILS` environment variable (comma-separated
+emails), still works too. Once everyone who needs access has the admin role,
+delete `ADMIN_EMAILS` and trigger a deploy. With it gone, only the role
+counts.
 
 ## Backups
 The photos only live in Netlify Blobs, so take a copy now and then:
