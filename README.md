@@ -62,10 +62,9 @@ An admin is anyone with the **admin** role: Identity → Users → click the use
 changes, and users can't give themselves one. After adding a role, log out
 and back in so the login picks it up.
 
-The older way, the `ADMIN_EMAILS` environment variable (comma-separated
-emails), still works too. Once everyone who needs access has the admin role,
-delete `ADMIN_EMAILS` and trigger a deploy. With it gone, only the role
-counts.
+The code also still accepts an `ADMIN_EMAILS` environment variable
+(comma-separated emails), the older way of doing this. It's been deleted on
+the live site and shouldn't be needed again: the role is what counts.
 
 ## Backups
 The photos only live in Netlify Blobs, so take a copy now and then:
