@@ -310,7 +310,8 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <div>&copy; 2026 OS Media — Owen Smith · ABN 49 778 330 676</div>
+      <div>&copy; <span class="copy-year">2026</span> OS Media — Owen Smith · ABN 49 778 330 676</div>
+      <script>document.querySelectorAll('.copy-year').forEach(function(el){ el.textContent = new Date().getFullYear(); });</script>
       <div>Perth, WA</div>
     </div>
   </div>
