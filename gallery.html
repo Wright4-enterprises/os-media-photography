@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="format-detection" content="telephone=no">
 <title>Gallery — OS Media</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -104,7 +105,26 @@
     display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
   .album-info{ font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--chrome-dim); margin-top:6px; }
 
+  /* Phone-only layout toggle: one big album per row, or two smaller ones */
+  .layout-bar{ display:none; }
+  .layout-toggle{
+    width:44px; height:44px; display:grid; place-items:center;
+    background:none; border:none; padding:0; cursor:pointer; color:var(--chrome-dim);
+    opacity:0.5; transition:opacity .2s ease, color .2s ease;
+  }
+  .layout-toggle:active{ opacity:0.8; }
+  @media (hover:hover){ .layout-toggle:hover{ opacity:0.85; } }
+  .layout-toggle svg{ width:20px; height:20px; }
+  @media (max-width:640px){
+    .layout-bar{ display:flex; justify-content:flex-end; margin-bottom:-14px; }
+    .albums.compact{ grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; }
+    .albums.compact .album-meta, .albums.compact .skeleton-meta{ padding:10px 10px 12px; }
+    .albums.compact .album-title{ font-size:14px; -webkit-line-clamp:2; }
+    .albums.compact .album-info{ font-size:10.5px; margin-top:4px; }
+  }
+
   .empty-state{ text-align:center; padding:60px 20px; color:var(--chrome-dim); }
+  .albums .empty-state{ grid-column:1 / -1; }
 
   /* Skeleton loading tiles */
   .skeleton{
@@ -253,6 +273,9 @@
       <h1>GALLERY</h1>
       <p class="sub">Every job OS Media has shot, kept together by shoot — meets, private sessions, and everything in between.</p>
     </div>
+    <div class="layout-bar">
+      <button type="button" class="layout-toggle" id="layoutToggle" onclick="toggleLayout()" aria-pressed="false" aria-label="Show two shoots per row"></button>
+    </div>
     <div id="albumsGrid" class="albums"></div>
   </div>
 </div>
@@ -287,6 +310,29 @@
   let allShoots = [];
   let currentPhotos = [];
   let currentIndex = 0;
+
+  // Phone layout toggle. The icon shows the layout you'd switch TO:
+  // four squares = two per row, one box with a cut-off one below = back to one per row.
+  const GRID_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="7.5" height="7.5" rx="2.2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2.2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2.2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2.2"/></svg>';
+  const SINGLE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><rect x="3" y="2" width="18" height="13" rx="2.8"/><path d="M3 24v-2.2a2.8 2.8 0 0 1 2.8-2.8h12.4a2.8 2.8 0 0 1 2.8 2.8v2.2"/></svg>';
+
+  function applyLayout(compact){
+    document.getElementById('albumsGrid').classList.toggle('compact', compact);
+    const btn = document.getElementById('layoutToggle');
+    btn.innerHTML = compact ? SINGLE_ICON : GRID_ICON;
+    btn.setAttribute('aria-pressed', String(compact));
+    btn.setAttribute('aria-label', compact ? 'Show one shoot per row' : 'Show two shoots per row');
+  }
+
+  function toggleLayout(){
+    const compact = !document.getElementById('albumsGrid').classList.contains('compact');
+    applyLayout(compact);
+    try { localStorage.setItem('galleryLayout', compact ? 'compact' : 'single'); } catch(e) {}
+  }
+
+  let savedLayout = null;
+  try { savedLayout = localStorage.getItem('galleryLayout'); } catch(e) {}
+  applyLayout(savedLayout === 'compact');
 
   function renderSkeletons(count){
     const grid = document.getElementById('albumsGrid');
