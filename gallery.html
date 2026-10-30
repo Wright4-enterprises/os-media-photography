@@ -369,6 +369,21 @@
     renderAlbums();
   }
 
+  // A gallery tab left open (or one the phone brings back with the Back
+  // button) keeps the list it loaded first, so an edit made in admin since
+  // wouldn't show. Quietly re-fetch whenever the page comes back into view.
+  async function refreshShoots(){
+    try{
+      const res = await fetch('/.netlify/functions/shoots-list?t=' + Date.now());
+      if(!res.ok) return;
+      const data = await res.json();
+      allShoots = (data.shoots || []).filter(s => !s.hidden && !s.archived && s.photos && s.photos.length > 0);
+      if(!document.getElementById('albumsView').classList.contains('hidden')) renderAlbums();
+    }catch(e){}
+  }
+  window.addEventListener('pageshow', e => { if(e.persisted) refreshShoots(); });
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') refreshShoots(); });
+
   // Shoot titles are typed by Owen and can contain quotes or < >, so escape
   // them before they go into HTML.
   function esc(str){
