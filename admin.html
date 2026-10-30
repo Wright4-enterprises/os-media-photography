@@ -1081,6 +1081,7 @@
 
     document.getElementById('editTitle').value = shoot.title;
     document.getElementById('editDate').value = shoot.date;
+    editSnapshot = editState(shoot);
     renderEditPhotoList(shoot);
     updateHideArchiveButtons(shoot);
 
@@ -1090,7 +1091,27 @@
     window.scrollTo(0,0);
   }
 
-  function closeEditShoot() {
+  // What the edit form holds right now, to spot changes that haven't been saved.
+  let editSnapshot = null;
+  function editState(shoot) {
+    return JSON.stringify({
+      title: document.getElementById('editTitle').value.trim(),
+      date: document.getElementById('editDate').value,
+      coverPhoto: shoot.coverPhoto || null,
+      featuredPhotos: shoot.featuredPhotos || [],
+      photoKeys: shoot.photoKeys
+    });
+  }
+
+  // Leaving the edit page used to throw away anything not saved with "Save
+  // changes" (a new name, date, cover or photo order). Now it saves first, and
+  // stays on the page if that save fails so nothing is lost.
+  async function closeEditShoot() {
+    const shoot = allShoots.find(s => s.id === editingShootId);
+    if (shoot && editState(shoot) !== editSnapshot) {
+      const saved = await saveEditedShoot();
+      if (!saved) return;
+    }
     editingShootId = null;
     document.getElementById('editView').classList.remove('active');
     document.getElementById('gridView').style.display = 'block';
@@ -1360,8 +1381,15 @@
     const title = document.getElementById('editTitle').value.trim();
     const date = document.getElementById('editDate').value;
 
+    if (!shoot) return false;
+    if (!title) {
+      alert('Your changes were NOT saved: a shoot needs a name.');
+      return false;
+    }
     btn.disabled = true;
     btn.textContent = 'Saving...';
+    let ok = false;
+    let failReason = '';
 
     try {
       const headers = await getAuthHeader();
@@ -1369,7 +1397,7 @@
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          shootId: editingShootId,
+          shootId: shoot.id,
           title,
           date,
           coverPhoto: shoot.coverPhoto,
@@ -1379,19 +1407,32 @@
       });
 
       if (res.ok) {
+        const data = await res.json();
+        // Keep the list on this page in step with what was saved, so going
+        // back shows the new name and date straight away.
+        if (data.shoot) Object.assign(shoot, data.shoot);
+        editSnapshot = editState(shoot);
         btn.textContent = '✓ Saved!';
         btn.style.background = '#4CAF50';
+        ok = true;
       } else {
-        btn.textContent = '✗ Failed - try again';
-        btn.style.background = '#C43B3B';
+        failReason = (await res.text()) || ('error ' + res.status);
       }
     } catch (e) {
       console.error('Save failed:', e);
-      btn.textContent = '✗ Failed - try again';
+      failReason = 'Could not reach the server. Check your connection.';
+    }
+
+    if (!ok) {
+      btn.textContent = '✗ Not saved';
       btn.style.background = '#C43B3B';
+      // A red button for a second and a half was easy to miss, so say it
+      // plainly and keep the changes on screen to try again.
+      alert('Your changes were NOT saved: ' + failReason + '\n\nThey are still on the page - press Save changes to try again. If it keeps failing, log out and back in.');
     }
 
     setTimeout(() => { btn.textContent = 'Save changes'; btn.style.background = ''; btn.disabled = false; }, 1500);
+    return ok;
   }
 
   async function toggleHidden() {
